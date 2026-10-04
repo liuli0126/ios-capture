@@ -1,0 +1,15 @@
+#!/bin/sh
+
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+export PATH
+
+if [ "$1" = "configure" ]; then
+    if command -v uicache >/dev/null 2>&1; then
+        uicache -p /Applications/iOSCapture.app >/dev/null 2>&1 || true
+    fi
+    if command -v killall >/dev/null 2>&1; then
+        killall iOSCapture >/dev/null 2>&1 || true
+    fi
+fi
+
+exit 0

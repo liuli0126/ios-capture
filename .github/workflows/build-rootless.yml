@@ -1,0 +1,66 @@
+name: Build iOS Capture rootless
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "Makefile"
+      - "control"
+      - "postinst.rootless"
+      - "shared/**"
+      - "tweak/**"
+      - "manager/**"
+      - "scripts/**"
+      - "tests/**"
+      - ".github/workflows/build-rootless.yml"
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test project structure
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Install build tools
+        run: brew install ldid dpkg make perl
+
+      - name: Install Theos and SDKs
+        env:
+          THEOS: ${{ runner.temp }}/theos
+        run: |
+          git clone --depth 1 --recursive https://github.com/theos/theos.git "$THEOS"
+          git clone --depth 1 https://github.com/theos/sdks.git "$RUNNER_TEMP/theos-sdks"
+          mkdir -p "$THEOS/sdks"
+          cp -R "$RUNNER_TEMP/theos-sdks/." "$THEOS/sdks/"
+          echo "THEOS=$THEOS" >> "$GITHUB_ENV"
+
+      - name: Prepare rootless package
+        run: |
+          mkdir -p layout/DEBIAN
+          cp postinst.rootless layout/DEBIAN/postinst
+          chmod 755 layout/DEBIAN/postinst
+
+      - name: Build rootless package
+        run: make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+
+      - name: Verify package
+        run: |
+          package=$(find packages -name '*.deb' -type f -print -quit)
+          test -n "$package"
+          mkdir -p "$RUNNER_TEMP/package-rootless"
+          dpkg-deb -x "$package" "$RUNNER_TEMP/package-rootless"
+          python3 scripts/verify_package.py "$RUNNER_TEMP/package-rootless" --scheme rootless
+          hook=$(find "$RUNNER_TEMP/package-rootless" -name iOSCaptureHook.dylib -type f -print -quit)
+          manager=$(find "$RUNNER_TEMP/package-rootless" -path '*/iOSCapture.app/iOSCapture' -type f -print -quit)
+          lipo -info "$hook"
+          lipo -info "$manager"
+
+      - name: Upload rootless deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOSCapture-rootless
+          path: packages/*.deb
+          if-no-files-found: error

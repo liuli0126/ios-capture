@@ -1,0 +1,85 @@
+name: Build iOS Capture iOS 13 rootful
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "Makefile"
+      - "control.rootful"
+      - "postinst.rootful"
+      - "shared/**"
+      - "tweak/**"
+      - "manager/**"
+      - "scripts/**"
+      - "tests/**"
+      - ".github/workflows/build-rootful-ios13.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test project structure
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential dpkg-dev perl xz-utils libtinfo5 libncurses5 libxml2
+
+      - name: Install Theos and iOS 13 SDK
+        env:
+          THEOS: ${{ runner.temp }}/theos
+        run: |
+          git clone --depth 1 --recursive https://github.com/theos/theos.git "$THEOS"
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/theos/sdks.git "$RUNNER_TEMP/theos-sdks"
+          git -C "$RUNNER_TEMP/theos-sdks" sparse-checkout set iPhoneOS13.7.sdk
+          mkdir -p "$THEOS/sdks"
+          cp -R "$RUNNER_TEMP/theos-sdks/iPhoneOS13.7.sdk" "$THEOS/sdks/"
+          echo "THEOS=$THEOS" >> "$GITHUB_ENV"
+
+      - name: Install legacy arm64e compiler
+        run: |
+          curl --fail --location --retry 3 \
+            https://github.com/sbingner/llvm-project/releases/download/v10.0.0-2/linux-ios-arm64e-clang-toolchain.tar.lzma \
+            --output "$RUNNER_TEMP/legacy-toolchain.tar.lzma"
+          mkdir -p "$RUNNER_TEMP/legacy-toolchain"
+          tar --lzma -xf "$RUNNER_TEMP/legacy-toolchain.tar.lzma" -C "$RUNNER_TEMP/legacy-toolchain"
+          legacy_clang=$(find -L "$RUNNER_TEMP/legacy-toolchain" -path '*/bin/clang' -type f -print -quit)
+          test -n "$legacy_clang"
+          legacy_root=$(dirname "$(dirname "$legacy_clang")")
+          mkdir -p "$THEOS/toolchain/linux"
+          ln -s "$legacy_root" "$THEOS/toolchain/linux/iphone"
+          echo "$legacy_root/bin" >> "$GITHUB_PATH"
+          echo "LD_LIBRARY_PATH=$legacy_root/lib" >> "$GITHUB_ENV"
+
+      - name: Prepare rootful package
+        run: |
+          cp control.rootful control
+          mkdir -p layout/DEBIAN
+          cp postinst.rootful layout/DEBIAN/postinst
+          chmod 755 layout/DEBIAN/postinst
+
+      - name: Build rootful package
+        run: make package FINALPACKAGE=1 TARGET=iphone:clang:13.7:13.0
+
+      - name: Verify package and iOS 13 ABI
+        run: |
+          package=$(find packages -name '*_iphoneos-arm.deb' -type f -print -quit)
+          test -n "$package"
+          mkdir -p "$RUNNER_TEMP/package-rootful"
+          dpkg-deb -x "$package" "$RUNNER_TEMP/package-rootful"
+          python3 scripts/verify_package.py "$RUNNER_TEMP/package-rootful" --scheme rootful
+          hook=$(find "$RUNNER_TEMP/package-rootful" -name iOSCaptureHook.dylib -type f -print -quit)
+          manager=$(find "$RUNNER_TEMP/package-rootful" -path '*/iOSCapture.app/iOSCapture' -type f -print -quit)
+          python3 scripts/verify_ios13_abi.py "$hook"
+          python3 scripts/verify_ios13_abi.py "$manager"
+
+      - name: Upload rootful deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOSCapture-iOS13-rootful
+          path: packages/*_iphoneos-arm.deb
+          if-no-files-found: error

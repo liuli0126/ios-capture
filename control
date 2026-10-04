@@ -1,0 +1,9 @@
+Package: com.ioscapture
+Name: iOS Capture
+Version: 0.1.0
+Architecture: iphoneos-arm64
+Description: Authorized HTTP(S) capture companion for jailbroken iOS devices
+Maintainer: iOS Capture
+Author: iOS Capture
+Section: Tweaks
+Depends: firmware (>= 15.0), ellekit | mobilesubstrate

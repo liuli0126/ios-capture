@@ -1,0 +1,9 @@
+.theos/
+packages/
+obj/
+*.deb
+*.dylib
+*.DS_Store
+__pycache__/
+research/case/**/evidence/apk-select/
+research/case/**/evidence/samples/

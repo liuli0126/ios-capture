@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.sh text eol=lf
+Makefile text eol=lf
+control text eol=lf
+control.rootful text eol=lf
