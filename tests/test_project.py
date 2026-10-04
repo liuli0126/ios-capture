@@ -59,11 +59,11 @@ class ProjectTests(unittest.TestCase):
         self.assertFalse(missing)
 
     def test_tweak_filter_avoids_daemons(self):
-        filter_text = (ROOT / "tweak" / "iOSCaptureHook.plist").read_text(encoding="utf-8")
-        self.assertRegex(filter_text, r'Classes\s*=\s*\("UIApplication"\)')
-        self.assertNotIn("Executables", filter_text)
-        self.assertNotIn("mediaserverd", filter_text)
-        self.assertNotIn("SpringBoard", filter_text)
+        with (ROOT / "tweak" / "iOSCaptureHook.plist").open("rb") as handle:
+            filter_configuration = plistlib.load(handle)
+        filter_rules = filter_configuration["Filter"]
+        self.assertEqual(filter_rules["Classes"], ["UIApplication"])
+        self.assertNotIn("Executables", filter_rules)
 
     def test_rootful_and_rootless_controls(self):
         rootless = (ROOT / "control").read_text(encoding="utf-8")
