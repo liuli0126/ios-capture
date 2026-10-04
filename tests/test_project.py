@@ -15,7 +15,8 @@ class ProjectTests(unittest.TestCase):
         self.assertEqual(info["MinimumOSVersion"], "13.0")
 
         makefile = (ROOT / "manager" / "Makefile").read_text(encoding="utf-8")
-        self.assertIn("-S$(THEOS_PROJECT_DIR)/manager/entitlements.plist", makefile)
+        self.assertIn("-S$(THEOS_PROJECT_DIR)/manager/Entitlements.plist", makefile)
+        self.assertTrue((ROOT / "manager" / "Entitlements.plist").is_file())
 
     def test_preferences_are_shared_by_manager_and_tweak(self):
         preferences = (ROOT / "shared" / "ICPreferences.m").read_text(encoding="utf-8")
