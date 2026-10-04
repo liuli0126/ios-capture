@@ -34,6 +34,11 @@ class ProjectTests(unittest.TestCase):
         self.assertNotRegex(header, r"\bnullable\s+id\b")
         self.assertIn('extern "C" {', header)
 
+    def test_package_verifier_parses_compiled_plists(self):
+        verifier = (ROOT / "scripts" / "verify_package.py").read_text(encoding="utf-8")
+        self.assertIn("plistlib.load(handle)", verifier)
+        self.assertNotIn("filter_plist.read_text", verifier)
+
     def test_tls_hook_coverage(self):
         source = (ROOT / "tweak" / "ICTLSHooks.mm").read_text(encoding="utf-8")
         expected = {

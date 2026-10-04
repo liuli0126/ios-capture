@@ -55,6 +55,14 @@ jobs:
           echo "$legacy_root/bin" >> "$GITHUB_PATH"
           echo "LD_LIBRARY_PATH=$legacy_root/lib" >> "$GITHUB_ENV"
 
+      - name: Install modern signing tool
+        run: |
+          curl --fail --location --retry 3 \
+            https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_linux_x86_64 \
+            --output "$RUNNER_TEMP/ldid"
+          chmod 755 "$RUNNER_TEMP/ldid"
+          echo "IOS_CAPTURE_LDID=$RUNNER_TEMP/ldid" >> "$GITHUB_ENV"
+
       - name: Prepare rootful package
         run: |
           cp control.rootful control
@@ -63,7 +71,7 @@ jobs:
           chmod 755 layout/DEBIAN/postinst
 
       - name: Build rootful package
-        run: make package FINALPACKAGE=1 TARGET=iphone:clang:13.7:13.0
+        run: make package FINALPACKAGE=1 TARGET=iphone:clang:13.7:13.0 TARGET_CODESIGN="$IOS_CAPTURE_LDID"
 
       - name: Verify package and iOS 13 ABI
         run: |

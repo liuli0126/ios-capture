@@ -37,8 +37,10 @@ def verify(root: Path, scheme: str) -> None:
     if missing:
         raise ValueError("hook dylib is missing markers: " + ", ".join(missing))
 
-    filter_text = filter_plist.read_text(encoding="utf-8")
-    if "UIApplication" not in filter_text or "Executables" in filter_text:
+    with filter_plist.open("rb") as handle:
+        filter_configuration = plistlib.load(handle)
+    filter_rules = filter_configuration.get("Filter", {})
+    if "UIApplication" not in filter_rules.get("Classes", []) or "Executables" in filter_rules:
         raise ValueError("unexpected tweak injection filter")
 
     with info_path.open("rb") as handle:
