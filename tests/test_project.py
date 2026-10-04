@@ -32,6 +32,7 @@ class ProjectTests(unittest.TestCase):
         header = (ROOT / "shared" / "ICPreferences.h").read_text(encoding="utf-8")
         self.assertIn("id _Nullable ICCopyPreference", header)
         self.assertNotRegex(header, r"\bnullable\s+id\b")
+        self.assertIn('extern "C" {', header)
 
     def test_tls_hook_coverage(self):
         source = (ROOT / "tweak" / "ICTLSHooks.mm").read_text(encoding="utf-8")

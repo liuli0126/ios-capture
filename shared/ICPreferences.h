@@ -2,6 +2,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 FOUNDATION_EXPORT NSString * const ICPreferencesDomain;
 FOUNDATION_EXPORT NSString * const ICPreferencesChangedNotification;
 
@@ -25,5 +29,9 @@ void ICSetPreference(NSString *key, id _Nullable value);
 BOOL ICIsCurrentProcessSelected(void);
 void ICMarkCurrentProcessInjected(void);
 NSString *ICJailbreakEnvironmentDescription(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 NS_ASSUME_NONNULL_END
