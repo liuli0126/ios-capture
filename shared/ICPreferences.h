@@ -19,8 +19,8 @@ void ICSetSelectedBundleIdentifiers(NSArray<NSString *> *bundleIdentifiers);
 BOOL ICBoolPreference(NSString *key, BOOL fallback);
 void ICSetBoolPreference(NSString *key, BOOL value);
 
-nullable id ICCopyPreference(NSString *key);
-void ICSetPreference(NSString *key, nullable id value);
+id _Nullable ICCopyPreference(NSString *key);
+void ICSetPreference(NSString *key, id _Nullable value);
 
 BOOL ICIsCurrentProcessSelected(void);
 void ICMarkCurrentProcessInjected(void);

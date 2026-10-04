@@ -23,6 +23,16 @@ class ProjectTests(unittest.TestCase):
         self.assertIn("ICIsCurrentProcessSelected", tweak)
         self.assertLess(tweak.index("ICIsCurrentProcessSelected"), tweak.index("ICInstallTLSHooks"))
 
+    def test_subprojects_include_shared_headers_from_project_root(self):
+        for relative_makefile in ("tweak/Makefile", "manager/Makefile"):
+            makefile = (ROOT / relative_makefile).read_text(encoding="utf-8")
+            self.assertIn("-I$(THEOS_PROJECT_DIR)/shared", makefile)
+            self.assertNotIn("-I$(THEOS_PROJECT_DIR)/../shared", makefile)
+
+        header = (ROOT / "shared" / "ICPreferences.h").read_text(encoding="utf-8")
+        self.assertIn("id _Nullable ICCopyPreference", header)
+        self.assertNotRegex(header, r"\bnullable\s+id\b")
+
     def test_tls_hook_coverage(self):
         source = (ROOT / "tweak" / "ICTLSHooks.mm").read_text(encoding="utf-8")
         expected = {
