@@ -6,18 +6,21 @@
 
 #if defined(IOSCAPTURE_DIRECT_INJECTION)
 static UIWindow *ICActiveWindow(void) {
+    UIWindow *fallback = nil;
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
-        if (![scene isKindOfClass:UIWindowScene.class] ||
-            scene.activationState != UISceneActivationStateForegroundActive) {
+        if (![scene isKindOfClass:UIWindowScene.class]) {
             continue;
         }
         for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+            if (!fallback && scene.activationState == UISceneActivationStateForegroundActive) {
+                fallback = window;
+            }
             if (window.isKeyWindow) {
                 return window;
             }
         }
     }
-    return UIApplication.sharedApplication.keyWindow;
+    return fallback;
 }
 
 static void ICShowHookStatus(void) {
