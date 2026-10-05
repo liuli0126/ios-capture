@@ -28,6 +28,7 @@ static void ICLog(NSString *format, ...) {
     NSLog(@"[iOSCapture] %@", message);
 }
 
+#if !defined(IOSCAPTURE_DIRECT_INJECTION)
 static void *ICResolveSymbol(const char *name) {
     void *symbol = dlsym(RTLD_DEFAULT, name);
     if (symbol) {
@@ -41,6 +42,7 @@ static void *ICResolveSymbol(const char *name) {
     });
     return securityHandle ? dlsym(securityHandle, name) : NULL;
 }
+#endif
 
 static BOOL ICInstallFunctionHook(const char *name, void *replacement, void **original) {
 #if defined(IOSCAPTURE_DIRECT_INJECTION)
