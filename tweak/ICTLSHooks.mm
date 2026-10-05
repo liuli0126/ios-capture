@@ -6,9 +6,7 @@
 #import <Security/Security.h>
 #import <dlfcn.h>
 #import <objc/runtime.h>
-#if defined(IOSCAPTURE_DIRECT_INJECTION)
-#import "third_party/fishhook/fishhook.h"
-#else
+#if !defined(IOSCAPTURE_DIRECT_INJECTION)
 #import <substrate.h>
 #endif
 
@@ -28,7 +26,6 @@ static void ICLog(NSString *format, ...) {
     NSLog(@"[iOSCapture] %@", message);
 }
 
-#if !defined(IOSCAPTURE_DIRECT_INJECTION)
 static void *ICResolveSymbol(const char *name) {
     void *symbol = dlsym(RTLD_DEFAULT, name);
     if (symbol) {
@@ -42,12 +39,50 @@ static void *ICResolveSymbol(const char *name) {
     });
     return securityHandle ? dlsym(securityHandle, name) : NULL;
 }
+
+#if defined(IOSCAPTURE_DIRECT_INJECTION)
+typedef void (*ICMSHookFunction)(void *symbol, void *replacement, void **original);
+
+static ICMSHookFunction ICResolveRuntimeHookFunction(void) {
+    static ICMSHookFunction hookFunction = NULL;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        hookFunction = reinterpret_cast<ICMSHookFunction>(dlsym(RTLD_DEFAULT, "MSHookFunction"));
+        if (hookFunction) {
+            return;
+        }
+
+        const char *candidatePaths[] = {
+            "/var/jb/usr/lib/libsubstrate.dylib",
+            "/var/jb/Library/Frameworks/CydiaSubstrate.framework/CydiaSubstrate",
+            "/usr/lib/libsubstrate.dylib",
+            "/Library/Frameworks/CydiaSubstrate.framework/CydiaSubstrate",
+            NULL,
+        };
+        for (NSUInteger index = 0; candidatePaths[index] != NULL; index++) {
+            void *handle = dlopen(candidatePaths[index], RTLD_LAZY | RTLD_GLOBAL);
+            if (!handle) {
+                continue;
+            }
+            hookFunction = reinterpret_cast<ICMSHookFunction>(dlsym(handle, "MSHookFunction"));
+            if (hookFunction) {
+                break;
+            }
+        }
+    });
+    return hookFunction;
+}
 #endif
 
 static BOOL ICInstallFunctionHook(const char *name, void *replacement, void **original) {
 #if defined(IOSCAPTURE_DIRECT_INJECTION)
-    struct rebinding binding = {name, replacement, original};
-    return rebind_symbols(&binding, 1) == 0;
+    void *symbol = ICResolveSymbol(name);
+    ICMSHookFunction hookFunction = ICResolveRuntimeHookFunction();
+    if (!symbol || !hookFunction) {
+        return NO;
+    }
+    hookFunction(symbol, replacement, original);
+    return YES;
 #else
     void *symbol = ICResolveSymbol(name);
     if (!symbol) {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4 - 2026-10-05
+
+- Replaced direct-injection fishhook startup with delayed runtime resolution of the existing Dopamine Hook API.
+- Direct injection now skips C function Hooks when the runtime API is unavailable instead of failing App startup.
+- Paused automatic iOS 13 builds while iOS 15+ direct injection is stabilized.
+
 ## 0.1.3 - 2026-10-05
 
 - Removed the Substrate load dependency from direct-injection dylibs.

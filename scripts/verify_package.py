@@ -54,9 +54,9 @@ def verify(root: Path, scheme: str) -> None:
     ]
     if missing_direct:
         raise ValueError("direct hook dylib is missing markers: " + ", ".join(missing_direct))
-    forbidden_direct_dependencies = (b"CydiaSubstrate", b"libsubstrate", b"com.ioscapture.settings")
+    forbidden_direct_dependencies = (b"com.ioscapture.settings", b"selectedBundleIdentifiers")
     if any(marker in direct_hook_bytes for marker in forbidden_direct_dependencies):
-        raise ValueError("direct hook dylib must not depend on Substrate")
+        raise ValueError("direct hook dylib must not depend on shared preferences")
 
     with filter_plist.open("rb") as handle:
         filter_configuration = plistlib.load(handle)

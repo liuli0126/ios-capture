@@ -13,7 +13,7 @@ class ProjectTests(unittest.TestCase):
             info = plistlib.load(handle)
         self.assertEqual(info["CFBundleIdentifier"], "com.ioscapture.manager")
         self.assertEqual(info["MinimumOSVersion"], "13.0")
-        self.assertEqual(info["CFBundleShortVersionString"], "0.1.3")
+        self.assertEqual(info["CFBundleShortVersionString"], "0.1.4")
 
         makefile = (ROOT / "manager" / "Makefile").read_text(encoding="utf-8")
         self.assertIn("-S$(THEOS_PROJECT_DIR)/manager/Entitlements.plist", makefile)
@@ -47,7 +47,7 @@ class ProjectTests(unittest.TestCase):
         verifier = (ROOT / "scripts" / "verify_package.py").read_text(encoding="utf-8")
         self.assertIn("plistlib.load(handle)", verifier)
         self.assertNotIn("filter_plist.read_text", verifier)
-        self.assertIn('b"com.ioscapture.settings")', verifier)
+        self.assertIn('b"com.ioscapture.settings"', verifier)
         self.assertIn("forbidden_direct_dependencies", verifier)
 
     def test_tls_hook_coverage(self):
@@ -85,7 +85,7 @@ class ProjectTests(unittest.TestCase):
         hooks = (ROOT / "tweak" / "ICTLSHooks.mm").read_text(encoding="utf-8")
         self.assertIn("TWEAK_NAME = iOSCaptureHook iOSCaptureDirect", makefile)
         self.assertIn("-DIOSCAPTURE_DIRECT_INJECTION=1", makefile)
-        self.assertIn("third_party/fishhook/fishhook.c", makefile)
+        self.assertNotIn("fishhook", makefile)
         self.assertNotIn("iOSCaptureDirect_LIBRARIES", makefile)
         self.assertIn("#if defined(IOSCAPTURE_DIRECT_INJECTION)", tweak)
         direct_branch = tweak.split("#if defined(IOSCAPTURE_DIRECT_INJECTION)", 1)[1].split("#else", 1)[0]
@@ -94,7 +94,9 @@ class ProjectTests(unittest.TestCase):
         self.assertNotIn("ICMarkCurrentProcessLoaded", direct_branch)
         self.assertNotIn("ICMarkCurrentProcessInjected", direct_branch)
         self.assertIn("nativeTLSBypassEnabled = YES", hooks)
-        self.assertIn("rebind_symbols", hooks)
+        self.assertIn('dlsym(RTLD_DEFAULT, "MSHookFunction")', hooks)
+        self.assertIn('dlopen(candidatePaths[index], RTLD_LAZY | RTLD_GLOBAL)', hooks)
+        self.assertIn("dispatch_after", direct_branch)
 
     def test_rootful_and_rootless_controls(self):
         rootless = (ROOT / "control").read_text(encoding="utf-8")
@@ -105,7 +107,7 @@ class ProjectTests(unittest.TestCase):
         self.assertIn("firmware (>= 13.0)", rootful)
         for control in (rootless, rootful):
             self.assertIn("Package: com.ioscapture", control)
-            self.assertRegex(control, r"(?m)^Version: 0\.1\.3$")
+            self.assertRegex(control, r"(?m)^Version: 0\.1\.4$")
 
     def test_project_sources_do_not_depend_on_applelive(self):
         source_roots = (ROOT / "shared", ROOT / "tweak", ROOT / "manager")

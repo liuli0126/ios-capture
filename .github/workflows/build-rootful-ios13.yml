@@ -2,17 +2,6 @@ name: Build iOS Capture iOS 13 rootful
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "Makefile"
-      - "control.rootful"
-      - "postinst.rootful"
-      - "shared/**"
-      - "tweak/**"
-      - "manager/**"
-      - "scripts/**"
-      - "tests/**"
-      - ".github/workflows/build-rootful-ios13.yml"
 
 jobs:
   build:
