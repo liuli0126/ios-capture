@@ -1,4 +1,5 @@
 .theos/
+.artifacts/
 packages/
 obj/
 *.deb
