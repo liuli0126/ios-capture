@@ -17,7 +17,6 @@ REQUIRED_DIRECT_HOOK_MARKERS = (
     b"AFSecurityPolicy",
     b"TSKPinningValidator",
     b"SSL_set_custom_verify",
-    b"rebind_symbols",
 )
 
 
