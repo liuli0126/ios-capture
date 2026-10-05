@@ -34,20 +34,19 @@ static void ICShowHookStatus(void) {
         BOOL runtimeReady = ICHookRuntimeAvailable();
         CGFloat width = MAX(220.0, CGRectGetWidth(window.bounds) - 32.0);
         CGFloat top = window.safeAreaInsets.top + 8.0;
-        UILabel *banner = [[UILabel alloc] initWithFrame:CGRectMake(16.0, top, width, 64.0)];
+        UILabel *banner = [[UILabel alloc] initWithFrame:CGRectMake(16.0, top, width, 44.0)];
         banner.tag = 0x1C150001;
         banner.autoresizingMask = UIViewAutoresizingFlexibleWidth;
         banner.backgroundColor = runtimeReady && hookCount > 0
             ? [UIColor colorWithRed:0.08 green:0.46 blue:0.27 alpha:0.96]
             : [UIColor colorWithRed:0.72 green:0.16 blue:0.14 alpha:0.96];
         banner.textColor = UIColor.whiteColor;
-        banner.font = [UIFont monospacedSystemFontOfSize:11.0 weight:UIFontWeightSemibold];
+        banner.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightSemibold];
         banner.textAlignment = NSTextAlignmentCenter;
-        banner.numberOfLines = 3;
         banner.layer.cornerRadius = 7.0;
         banner.layer.masksToBounds = YES;
         banner.text = runtimeReady
-            ? ICCopyTLSHookStatusSummary()
+            ? [NSString stringWithFormat:@"iOS Capture active - %lu hooks", (unsigned long)hookCount]
             : @"iOS Capture: ElleKit Hook API missing";
         banner.alpha = 0.0;
         [window addSubview:banner];
@@ -56,18 +55,11 @@ static void ICShowHookStatus(void) {
             banner.alpha = 1.0;
         } completion:^(BOOL finished) {
             [UIView animateWithDuration:0.25
-                                  delay:9.0
+                                  delay:4.0
                                 options:UIViewAnimationOptionCurveEaseInOut
                              animations:^{ banner.alpha = 0.0; }
                              completion:^(BOOL done) { [banner removeFromSuperview]; }];
         }];
-
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)),
-                       dispatch_get_main_queue(), ^{
-            if (banner.superview) {
-                banner.text = ICCopyTLSHookStatusSummary();
-            }
-        });
     });
 }
 #endif

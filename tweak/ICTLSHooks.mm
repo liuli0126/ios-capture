@@ -9,7 +9,6 @@
 #import <errno.h>
 #import <mach-o/dyld.h>
 #import <netinet/in.h>
-#import <objc/message.h>
 #import <objc/runtime.h>
 #import <stdatomic.h>
 #import <string.h>
@@ -25,32 +24,7 @@ static BOOL ICTLSHooksEnabled = YES;
 static BOOL ICNativeTLSHooksEnabled = YES;
 static BOOL ICHTTP3FallbackEnabled = YES;
 
-typedef NS_ENUM(NSUInteger, ICHookCategory) {
-    ICHookCategorySystem = 0,
-    ICHookCategoryURLSession,
-    ICHookCategoryTTNet,
-    ICHookCategoryNativeTLS,
-    ICHookCategoryQUIC,
-    ICHookCategoryCount,
-};
-
-static _Atomic unsigned long ICInstalledByCategory[ICHookCategoryCount];
-static _Atomic unsigned long ICHitsByCategory[ICHookCategoryCount];
-static _Atomic unsigned long ICTTTaskClassesSeen = 0;
-
 static void ICInstallAvailableHooks(void);
-
-static void ICRecordCategory(ICHookCategory category, NSUInteger count) {
-    if (count > 0) {
-        atomic_fetch_add_explicit(&ICInstalledByCategory[category],
-                                  (unsigned long)count,
-                                  memory_order_relaxed);
-    }
-}
-
-static void ICRecordHit(ICHookCategory category) {
-    atomic_fetch_add_explicit(&ICHitsByCategory[category], 1, memory_order_relaxed);
-}
 
 static void ICLog(NSString *format, ...) NS_FORMAT_FUNCTION(1, 2);
 
@@ -216,48 +190,10 @@ BOOL ICHookRuntimeAvailable(void) {
 #endif
 }
 
-NSString *ICCopyTLSHookStatusSummary(void) {
-    unsigned long installed[ICHookCategoryCount] = {0};
-    unsigned long hits[ICHookCategoryCount] = {0};
-    for (NSUInteger index = 0; index < ICHookCategoryCount; index++) {
-        installed[index] = atomic_load_explicit(&ICInstalledByCategory[index], memory_order_relaxed);
-        hits[index] = atomic_load_explicit(&ICHitsByCategory[index], memory_order_relaxed);
-    }
-
-    BOOL hasTTImage = NO;
-    BOOL hasCronetImage = NO;
-    BOOL hasVCNImage = NO;
-    const uint32_t imageCount = _dyld_image_count();
-    for (uint32_t index = 0; index < imageCount; index++) {
-        const char *imageName = _dyld_get_image_name(index);
-        if (!imageName) {
-            continue;
-        }
-        hasTTImage |= strcasestr(imageName, "TTNetwork") != NULL ||
-                      strcasestr(imageName, "ByteDance") != NULL;
-        hasCronetImage |= strcasestr(imageName, "cronet") != NULL ||
-                          strcasestr(imageName, "boringssl") != NULL;
-        hasVCNImage |= strcasestr(imageName, "libvcn") != NULL;
-    }
-
-    return [NSString stringWithFormat:
-        @"iOS Capture 0.1.7  install/hit\nS%lu/%lu U%lu/%lu TT%lu/%lu N%lu/%lu Q%lu/%lu\nObj%lu Img T%d C%d V%d",
-        installed[ICHookCategorySystem], hits[ICHookCategorySystem],
-        installed[ICHookCategoryURLSession], hits[ICHookCategoryURLSession],
-        installed[ICHookCategoryTTNet], hits[ICHookCategoryTTNet],
-        installed[ICHookCategoryNativeTLS], hits[ICHookCategoryNativeTLS],
-        installed[ICHookCategoryQUIC], hits[ICHookCategoryQUIC],
-        atomic_load_explicit(&ICTTTaskClassesSeen, memory_order_relaxed),
-        hasTTImage ? 1 : 0,
-        hasCronetImage ? 1 : 0,
-        hasVCNImage ? 1 : 0];
-}
-
 #pragma mark - Security.framework
 
 static OSStatus (*ICOriginalSecTrustEvaluate)(SecTrustRef trust, SecTrustResultType *result) = NULL;
 static OSStatus ICReplacementSecTrustEvaluate(SecTrustRef trust, SecTrustResultType *result) {
-    ICRecordHit(ICHookCategorySystem);
     if (result) {
         *result = kSecTrustResultProceed;
     }
@@ -266,7 +202,6 @@ static OSStatus ICReplacementSecTrustEvaluate(SecTrustRef trust, SecTrustResultT
 
 static Boolean (*ICOriginalSecTrustEvaluateWithError)(SecTrustRef trust, CFErrorRef *error) = NULL;
 static Boolean ICReplacementSecTrustEvaluateWithError(SecTrustRef trust, CFErrorRef *error) {
-    ICRecordHit(ICHookCategorySystem);
     if (error) {
         *error = NULL;
     }
@@ -279,7 +214,6 @@ static OSStatus (*ICOriginalSecTrustEvaluateAsync)(SecTrustRef trust,
 static OSStatus ICReplacementSecTrustEvaluateAsync(SecTrustRef trust,
                                                     dispatch_queue_t queue,
                                                     SecTrustCallback callback) {
-    ICRecordHit(ICHookCategorySystem);
     if (callback) {
         callback(trust, kSecTrustResultProceed);
     }
@@ -292,7 +226,6 @@ static OSStatus (*ICOriginalSecTrustEvaluateAsyncWithError)(SecTrustRef trust,
 static OSStatus ICReplacementSecTrustEvaluateAsyncWithError(SecTrustRef trust,
                                                              dispatch_queue_t queue,
                                                              SecTrustWithErrorCallback callback) {
-    ICRecordHit(ICHookCategorySystem);
     if (callback) {
         callback(trust, true, NULL);
     }
@@ -305,7 +238,6 @@ static OSStatus (*ICOriginalSecTrustEvaluateFastAsync)(SecTrustRef trust,
 static OSStatus ICReplacementSecTrustEvaluateFastAsync(SecTrustRef trust,
                                                         dispatch_queue_t queue,
                                                         SecTrustCallback callback) {
-    ICRecordHit(ICHookCategorySystem);
     if (callback) {
         callback(trust, kSecTrustResultProceed);
     }
@@ -314,7 +246,6 @@ static OSStatus ICReplacementSecTrustEvaluateFastAsync(SecTrustRef trust,
 
 static OSStatus (*ICOriginalSecTrustGetTrustResult)(SecTrustRef trust, SecTrustResultType *result) = NULL;
 static OSStatus ICReplacementSecTrustGetTrustResult(SecTrustRef trust, SecTrustResultType *result) {
-    ICRecordHit(ICHookCategorySystem);
     if (result) {
         *result = kSecTrustResultProceed;
     }
@@ -373,7 +304,6 @@ static sec_protocol_verify_t ICAllowProtocolVerifyBlock = nil;
 static void ICReplacementProtocolSetVerifyBlock(sec_protocol_options_t options,
                                                  sec_protocol_verify_t verifyBlock,
                                                  dispatch_queue_t verifyQueue) {
-    ICRecordHit(ICHookCategorySystem);
     if (ICOriginalProtocolSetVerifyBlock && ICAllowProtocolVerifyBlock) {
         ICOriginalProtocolSetVerifyBlock(options, ICAllowProtocolVerifyBlock, verifyQueue);
     }
@@ -453,26 +383,22 @@ static id (*ICOriginalAFPolicyWithMode)(id, SEL, NSUInteger) = NULL;
 static id (*ICOriginalAFPolicyWithModeAndCertificates)(id, SEL, NSUInteger, id) = NULL;
 
 static BOOL ICReplacementAFEvaluate(id self, SEL command, SecTrustRef trust, NSString *domain) {
-    ICRecordHit(ICHookCategoryURLSession);
     return YES;
 }
 
 static void ICReplacementAFSetPinningMode(id self, SEL command, NSUInteger mode) {
-    ICRecordHit(ICHookCategoryURLSession);
     if (ICOriginalAFSetPinningMode) {
         ICOriginalAFSetPinningMode(self, command, 0);
     }
 }
 
 static void ICReplacementAFSetAllowInvalid(id self, SEL command, BOOL allowed) {
-    ICRecordHit(ICHookCategoryURLSession);
     if (ICOriginalAFSetAllowInvalid) {
         ICOriginalAFSetAllowInvalid(self, command, YES);
     }
 }
 
 static id ICReplacementAFPolicyWithMode(id self, SEL command, NSUInteger mode) {
-    ICRecordHit(ICHookCategoryURLSession);
     return ICOriginalAFPolicyWithMode ? ICOriginalAFPolicyWithMode(self, command, 0) : nil;
 }
 
@@ -480,7 +406,6 @@ static id ICReplacementAFPolicyWithModeAndCertificates(id self,
                                                         SEL command,
                                                         NSUInteger mode,
                                                         id certificates) {
-    ICRecordHit(ICHookCategoryURLSession);
     return ICOriginalAFPolicyWithModeAndCertificates
         ? ICOriginalAFPolicyWithModeAndCertificates(self, command, 0, certificates)
         : nil;
@@ -491,7 +416,6 @@ static NSInteger (*ICOriginalTrustKitClassEvaluate)(id, SEL, SecTrustRef, NSStri
 static BOOL (*ICOriginalTrustKitHandleChallenge)(id, SEL, NSURLAuthenticationChallenge *, ICChallengeCompletion) = NULL;
 
 static NSInteger ICReplacementTrustKitEvaluate(id self, SEL command, SecTrustRef trust, NSString *hostname) {
-    ICRecordHit(ICHookCategoryURLSession);
     return 0;
 }
 
@@ -499,7 +423,6 @@ static BOOL ICReplacementTrustKitHandleChallenge(id self,
                                                  SEL command,
                                                  NSURLAuthenticationChallenge *challenge,
                                                  ICChallengeCompletion completion) {
-    ICRecordHit(ICHookCategoryURLSession);
     if ([challenge.protectionSpace.authenticationMethod isEqualToString:NSURLAuthenticationMethodServerTrust] &&
         challenge.protectionSpace.serverTrust && completion) {
         completion(NSURLSessionAuthChallengeUseCredential,
@@ -546,7 +469,6 @@ static void ICReplacementSessionChallenge(id self,
                                           NSURLSession *session,
                                           NSURLAuthenticationChallenge *challenge,
                                           ICChallengeCompletion completion) {
-    ICRecordHit(ICHookCategoryURLSession);
     if (ICAllowServerTrustChallenge(challenge, completion)) {
         return;
     }
@@ -565,7 +487,6 @@ static void ICReplacementTaskChallenge(id self,
                                        NSURLSessionTask *task,
                                        NSURLAuthenticationChallenge *challenge,
                                        ICChallengeCompletion completion) {
-    ICRecordHit(ICHookCategoryURLSession);
     if (ICAllowServerTrustChallenge(challenge, completion)) {
         return;
     }
@@ -629,47 +550,26 @@ static NSUInteger ICInstallURLSessionDelegateHooks(void) {
 
 static BOOL (*ICOriginalTTGetSkipCertificateError)(id, SEL) = NULL;
 static void (*ICOriginalTTSetSkipCertificateError)(id, SEL, BOOL) = NULL;
-static void (*ICOriginalTTResume)(id, SEL) = NULL;
 
 static BOOL ICReplacementTTGetSkipCertificateError(id self, SEL command) {
-    ICRecordHit(ICHookCategoryTTNet);
     return YES;
 }
 
 static void ICReplacementTTSetSkipCertificateError(id self, SEL command, BOOL enabled) {
-    ICRecordHit(ICHookCategoryTTNet);
     if (ICOriginalTTSetSkipCertificateError) {
         ICOriginalTTSetSkipCertificateError(self, command, YES);
     }
 }
 
-static void ICReplacementTTResume(id self, SEL command) {
-    ICRecordHit(ICHookCategoryTTNet);
-    SEL setter = sel_registerName("setSkipSSLCertificateError:");
-    if ([self respondsToSelector:setter]) {
-        reinterpret_cast<void (*)(id, SEL, BOOL)>(objc_msgSend)(self, setter, YES);
-    }
-    if (ICOriginalTTResume) {
-        ICOriginalTTResume(self, command);
-    }
-}
-
-static id ICReplacementNoCertificates(id self, SEL command) {
-    ICRecordHit(ICHookCategoryTTNet);
+static id ICReplacementEmptyCertificates(id self, SEL command) {
     return nil;
 }
 
-static void ICReplacementClearCertificates(id self, SEL command, id certificates) {
-    ICRecordHit(ICHookCategoryTTNet);
-}
-
 static BOOL ICReplacementQuicDisabled(id self, SEL command) {
-    ICRecordHit(ICHookCategoryQUIC);
     return NO;
 }
 
 static void ICReplacementDisableQuicSetter(id self, SEL command, BOOL enabled) {
-    ICRecordHit(ICHookCategoryQUIC);
 }
 
 static NSUInteger ICInstallTTNetHooks(void) {
@@ -687,51 +587,17 @@ static NSUInteger ICInstallTTNetHooks(void) {
                              reinterpret_cast<IMP *>(&ICOriginalTTSetSkipCertificateError))) {
         count++;
     }
-    if (ICInstallMessageHook(taskClass,
-                             sel_registerName("resume"),
-                             reinterpret_cast<IMP>(&ICReplacementTTResume),
-                             reinterpret_cast<IMP *>(&ICOriginalTTResume))) {
-        count++;
-    }
-
-    int classCount = objc_getClassList(NULL, 0);
-    NSUInteger matchingTaskClasses = 0;
-    if (classCount > 0) {
-        Class *classes = reinterpret_cast<Class *>(calloc((size_t)classCount, sizeof(Class)));
-        classCount = objc_getClassList(classes, classCount);
-        SEL skipSelector = sel_registerName("skipSSLCertificateError");
-        for (int index = 0; index < classCount; index++) {
-            if (!ICClassDefinesSelector(classes[index], skipSelector)) {
-                continue;
-            }
-            matchingTaskClasses++;
-            count += ICInstallMessageReplacement(classes[index], skipSelector,
-                                                  reinterpret_cast<IMP>(&ICReplacementTTGetSkipCertificateError)) ? 1 : 0;
-        }
-        free(classes);
-    }
-    atomic_store_explicit(&ICTTTaskClassesSeen,
-                          (unsigned long)matchingTaskClasses,
-                          memory_order_relaxed);
 
     const char *managerClasses[] = {"TTNetworkManagerChromium", "TTNetworkManager", NULL};
-    const char *certificateGetters[] = {"ServerCertificate", "serverCertificate", NULL};
-    const char *certificateSetters[] = {"setServerCertificate:", NULL};
+    const char *certificateSelectors[] = {"ServerCertificate", "serverCertificate", NULL};
     for (NSUInteger classIndex = 0; managerClasses[classIndex]; classIndex++) {
         Class manager = objc_getClass(managerClasses[classIndex]);
-        for (NSUInteger selectorIndex = 0; certificateGetters[selectorIndex]; selectorIndex++) {
-            SEL selector = sel_registerName(certificateGetters[selectorIndex]);
+        for (NSUInteger selectorIndex = 0; certificateSelectors[selectorIndex]; selectorIndex++) {
+            SEL selector = sel_registerName(certificateSelectors[selectorIndex]);
             count += ICInstallMessageReplacement(manager, selector,
-                                                  reinterpret_cast<IMP>(&ICReplacementNoCertificates)) ? 1 : 0;
+                                                  reinterpret_cast<IMP>(&ICReplacementEmptyCertificates)) ? 1 : 0;
             count += ICInstallMessageReplacement(object_getClass(manager), selector,
-                                                  reinterpret_cast<IMP>(&ICReplacementNoCertificates)) ? 1 : 0;
-        }
-        for (NSUInteger selectorIndex = 0; certificateSetters[selectorIndex]; selectorIndex++) {
-            SEL selector = sel_registerName(certificateSetters[selectorIndex]);
-            count += ICInstallMessageReplacement(manager, selector,
-                                                  reinterpret_cast<IMP>(&ICReplacementClearCertificates)) ? 1 : 0;
-            count += ICInstallMessageReplacement(object_getClass(manager), selector,
-                                                  reinterpret_cast<IMP>(&ICReplacementClearCertificates)) ? 1 : 0;
+                                                  reinterpret_cast<IMP>(&ICReplacementEmptyCertificates)) ? 1 : 0;
         }
     }
     return count;
@@ -798,6 +664,7 @@ static NSUInteger ICInstallObjectiveCHooks(void) {
                                   reinterpret_cast<IMP *>(&ICOriginalTrustKitHandleChallenge)) ? 1 : 0;
 
     count += ICInstallURLSessionDelegateHooks();
+    count += ICInstallTTNetHooks();
     return count;
 }
 
@@ -818,18 +685,16 @@ static int ICBoringSSLAlwaysAllow(void *ssl, uint8_t *alert) {
 }
 
 static void ICReplacementSSLSetCustomVerify(void *ssl, int mode, ICBoringSSLVerifyCallback callback) {
-    ICRecordHit(ICHookCategoryNativeTLS);
     if (ICOriginalSSLSetCustomVerify) {
-        ICOriginalSSLSetCustomVerify(ssl, 0, &ICBoringSSLAlwaysAllow);
+        ICOriginalSSLSetCustomVerify(ssl, mode, &ICBoringSSLAlwaysAllow);
     }
 }
 
 static void ICReplacementSSLCTXSetCustomVerify(void *sslContext,
                                                int mode,
                                                ICBoringSSLVerifyCallback callback) {
-    ICRecordHit(ICHookCategoryNativeTLS);
     if (ICOriginalSSLCTXSetCustomVerify) {
-        ICOriginalSSLCTXSetCustomVerify(sslContext, 0, &ICBoringSSLAlwaysAllow);
+        ICOriginalSSLCTXSetCustomVerify(sslContext, mode, &ICBoringSSLAlwaysAllow);
     }
 }
 
@@ -844,14 +709,12 @@ static int ICOpenSSLAlwaysAllow(int preverifyOK, void *storeContext) {
 }
 
 static void ICReplacementSSLSetVerify(void *ssl, int mode, ICOpenSSLVerifyCallback callback) {
-    ICRecordHit(ICHookCategoryNativeTLS);
     if (ICOriginalSSLSetVerify) {
         ICOriginalSSLSetVerify(ssl, mode, &ICOpenSSLAlwaysAllow);
     }
 }
 
 static void ICReplacementSSLCTXSetVerify(void *sslContext, int mode, ICOpenSSLVerifyCallback callback) {
-    ICRecordHit(ICHookCategoryNativeTLS);
     if (ICOriginalSSLCTXSetVerify) {
         ICOriginalSSLCTXSetVerify(sslContext, mode, &ICOpenSSLAlwaysAllow);
     }
@@ -860,19 +723,16 @@ static void ICReplacementSSLCTXSetVerify(void *sslContext, int mode, ICOpenSSLVe
 
 static long (*ICOriginalSSLGetVerifyResult)(const void *ssl) = NULL;
 static long ICReplacementSSLGetVerifyResult(const void *ssl) {
-    ICRecordHit(ICHookCategoryNativeTLS);
     return 0; // X509_V_OK
 }
 
 static int (*ICOriginalX509VerifyCert)(void *storeContext) = NULL;
 static int ICReplacementX509VerifyCert(void *storeContext) {
-    ICRecordHit(ICHookCategoryNativeTLS);
     return 1;
 }
 
 static const char *(*ICOriginalSSLGetPSKIdentity)(const void *ssl) = NULL;
 static const char *ICReplacementSSLGetPSKIdentity(const void *ssl) {
-    ICRecordHit(ICHookCategoryNativeTLS);
     return "ioscapture";
 }
 
@@ -958,7 +818,6 @@ static BOOL ICIsHTTPSAddress(const struct sockaddr *address) {
 
 static int ICReplacementConnect(int socket, const struct sockaddr *address, socklen_t length) {
     if (ICIsHTTPSAddress(address) && ICIsDatagramSocket(socket)) {
-        ICRecordHit(ICHookCategoryQUIC);
         errno = ENETUNREACH;
         return -1;
     }
@@ -972,7 +831,6 @@ static ssize_t ICReplacementSendTo(int socket,
                                    const struct sockaddr *address,
                                    socklen_t addressLength) {
     if (ICIsHTTPSAddress(address) && ICIsDatagramSocket(socket)) {
-        ICRecordHit(ICHookCategoryQUIC);
         errno = ENETUNREACH;
         return -1;
     }
@@ -986,7 +844,6 @@ static ssize_t ICReplacementSendMessage(int socket, const struct msghdr *message
         ? reinterpret_cast<const struct sockaddr *>(message->msg_name)
         : NULL;
     if (ICIsHTTPSAddress(address) && ICIsDatagramSocket(socket)) {
-        ICRecordHit(ICHookCategoryQUIC);
         errno = ENETUNREACH;
         return -1;
     }
@@ -1019,23 +876,15 @@ static void ICRecordInstalledHooks(NSUInteger count) {
 static void ICInstallAvailableHooks(void) {
     NSUInteger installed = 0;
     if (ICTLSHooksEnabled) {
-        NSUInteger systemHooks = ICInstallSecurityHooks() + ICInstallNetworkFrameworkHooks();
-        NSUInteger urlHooks = ICInstallObjectiveCHooks();
-        NSUInteger ttHooks = ICInstallTTNetHooks();
-        ICRecordCategory(ICHookCategorySystem, systemHooks);
-        ICRecordCategory(ICHookCategoryURLSession, urlHooks);
-        ICRecordCategory(ICHookCategoryTTNet, ttHooks);
-        installed += systemHooks + urlHooks + ttHooks;
+        installed += ICInstallSecurityHooks();
+        installed += ICInstallNetworkFrameworkHooks();
+        installed += ICInstallObjectiveCHooks();
     }
     if (ICNativeTLSHooksEnabled) {
-        NSUInteger nativeHooks = ICInstallNativeTLSHooks();
-        ICRecordCategory(ICHookCategoryNativeTLS, nativeHooks);
-        installed += nativeHooks;
+        installed += ICInstallNativeTLSHooks();
     }
     if (ICHTTP3FallbackEnabled) {
-        NSUInteger quicHooks = ICInstallHTTP3FallbackHooks();
-        ICRecordCategory(ICHookCategoryQUIC, quicHooks);
-        installed += quicHooks;
+        installed += ICInstallHTTP3FallbackHooks();
     }
     ICRecordInstalledHooks(installed);
     if (installed > 0) {

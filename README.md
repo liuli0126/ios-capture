@@ -13,10 +13,10 @@
 
 ## 当前状态
 
-v0.1.7 当前只验证 iOS 15+ Dopamine/rootless。包含目标 App 选择器、通用 TLS Hook、TTNet 兼容、HTTP/3 回退和可选 native TLS Hook。
+v0.1.8 当前只验证 iOS 15+ Dopamine/rootless。该版本恢复到已确认可启动的 v0.1.5 Hook 路径，并修正 TTNet `ServerCertificate` 的返回值。
 
-- iOS 15+、Dopamine/ElleKit：安装 `com.ioscapture_0.1.7_iphoneos-arm64.deb`。
-- 巨魔注入器直注：使用 `iOSCaptureDirect-rootless.dylib`。直注版在目标进程启动时调用 Dopamine/ElleKit Hook 接口，不读取管理 App 的目标选择。
+- iOS 15+、Dopamine/ElleKit：安装 `com.ioscapture_0.1.8_iphoneos-arm64.deb`。
+- 巨魔注入器直注：使用 `iOSCaptureDirect-rootless.dylib`。直注版延迟调用当前 Dopamine 环境的 Hook 接口，不读取管理 App 的目标选择。
 - iOS 13 包内的 Hook 和管理 App 均包含 arm64 与 legacy arm64e，最低系统为 iOS 13.0。
 
 - [架构与可行性](docs/ARCHITECTURE.md)
@@ -24,7 +24,7 @@ v0.1.7 当前只验证 iOS 15+ Dopamine/rootless。包含目标 App 选择器、
 - [兼容性计划](docs/COMPATIBILITY.md)
 - [开发计划](PROJECT_PLAN.md)
 
-## v0.1.7 功能
+## v0.1.8 功能
 
 - 只对用户勾选的 App 启用 Hook。
 - `SecTrustEvaluate`、`SecTrustEvaluateWithError` 和 `SecTrustGetTrustResult`。
@@ -64,7 +64,7 @@ python -m unittest discover -s tests -v
 
 巨魔注入器直接注入后，目标 App 顶部会短暂显示状态条。绿色且 Hook 数量大于 0 表示 ElleKit Hook 接口可用；红色表示当前越狱环境未提供 Hook 接口。
 
-## v0.1.7 边界
+## v0.1.8 边界
 
 - 当前解决系统 TLS、AFNetworking、TrustKit，以及有动态导出符号的 BoringSSL/OpenSSL 校验。
 - 目标 App 自定义 AES、RSA、签名参数或 protobuf 业务层加密，需要拿到具体 App 和接口后增加专用 Hook。

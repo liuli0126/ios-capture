@@ -6,6 +6,6 @@ obj/
 *.dylib
 *.DS_Store
 __pycache__/
-/work/
 research/case/**/evidence/apk-select/
 research/case/**/evidence/samples/
+work/
