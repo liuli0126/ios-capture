@@ -444,7 +444,9 @@ static IMP ICLookupDelegateOriginal(NSMapTable *table, id instance) {
         for (Class cursor = object_getClass(instance); cursor; cursor = class_getSuperclass(cursor)) {
             NSValue *value = [table objectForKey:cursor];
             if (value) {
-                return reinterpret_cast<IMP>(value.pointerValue);
+                IMP original = NULL;
+                [value getValue:&original];
+                return original;
             }
         }
     }
@@ -512,7 +514,8 @@ static BOOL ICInstallDelegateHook(Class targetClass,
         if (!ICInstallMessageHook(targetClass, selector, replacement, &original) || !original) {
             return NO;
         }
-        [originals setObject:[NSValue valueWithPointer:original] forKey:targetClass];
+        [originals setObject:[NSValue value:&original withObjCType:@encode(IMP)]
+                       forKey:targetClass];
         return YES;
     }
 }
