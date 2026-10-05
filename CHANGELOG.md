@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.6 - 2026-10-05
+
+- Install direct-injection hooks during process construction so TTNet startup configuration is not missed.
+- Return `nil` for `TTNetworkManager` server-certificate lists and block later pin-list setters.
+- Force `TTHttpTask.skipSSLCertificateError` again immediately before `resume`.
+- Restore BoringSSL custom-verify hooks on arm64e with authenticated targets stripped before ElleKit patching.
+- Show installed and runtime-hit counts separately for system TLS, URLSession, TTNet, native TLS, and QUIC.
+
 ## 0.1.5 - 2026-10-05
 
 - Resolve `MSHookFunction` directly from Dopamine's rootless ElleKit runtime.

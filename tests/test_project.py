@@ -13,7 +13,7 @@ class ProjectTests(unittest.TestCase):
             info = plistlib.load(handle)
         self.assertEqual(info["CFBundleIdentifier"], "com.ioscapture.manager")
         self.assertEqual(info["MinimumOSVersion"], "13.0")
-        self.assertEqual(info["CFBundleShortVersionString"], "0.1.5")
+        self.assertEqual(info["CFBundleShortVersionString"], "0.1.6")
 
         makefile = (ROOT / "manager" / "Makefile").read_text(encoding="utf-8")
         self.assertIn("-S$(THEOS_PROJECT_DIR)/manager/Entitlements.plist", makefile)
@@ -63,6 +63,8 @@ class ProjectTests(unittest.TestCase):
             "TSKPinningValidator",
             "TTHttpTask",
             "TTNetworkManagerChromium",
+            "ICReplacementTTResume",
+            "ICReplacementNoCertificates",
             "SSL_set_custom_verify",
             "SSL_CTX_set_custom_verify",
             "SSL_get_verify_result",
@@ -106,6 +108,12 @@ class ProjectTests(unittest.TestCase):
         self.assertIn('/var/jb/usr/lib/libellekit.dylib', hooks)
         self.assertIn('_dyld_register_func_for_add_image', hooks)
         self.assertIn('ICReplacementConnect', hooks)
+        self.assertIn('ptrauth_strip(symbol, ptrauth_key_function_pointer)', hooks)
+        self.assertIn('ICCopyTLSHookStatusSummary', hooks)
+        self.assertIn('return nil;', hooks)
+        ctor_direct_branch = tweak.split("%ctor", 1)[1].split("#else", 1)[0]
+        self.assertLess(ctor_direct_branch.index("ICInstallTLSHooks"),
+                        ctor_direct_branch.index("dispatch_after"))
         self.assertIn("dispatch_after", direct_branch)
 
     def test_rootful_and_rootless_controls(self):
@@ -117,7 +125,7 @@ class ProjectTests(unittest.TestCase):
         self.assertIn("firmware (>= 13.0)", rootful)
         for control in (rootless, rootful):
             self.assertIn("Package: com.ioscapture", control)
-            self.assertRegex(control, r"(?m)^Version: 0\.1\.5$")
+            self.assertRegex(control, r"(?m)^Version: 0\.1\.6$")
 
     def test_project_sources_do_not_depend_on_applelive(self):
         source_roots = (ROOT / "shared", ROOT / "tweak", ROOT / "manager")

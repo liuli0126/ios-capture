@@ -26,6 +26,17 @@ the exact target App version.
    `libvcn` pinning paths. There is no public source for their binary patches,
    so `libvcn` remains version-specific work if the public selectors and exported
    native TLS symbols are absent.
+7. The public Douyin TTNetworkManager script returns `nil` from both
+   `TTNetworkManager.ServerCertificate` implementations. Returning an empty
+   array is not equivalent and can leave the Chromium pin list enabled with no
+   acceptable certificate.
+8. `TTHttpTask` retains a public `resume` method and a concrete
+   `_skipSSLCertificateError` property. Setting the property immediately before
+   `resume` covers tasks created before the runtime scan installs its getter hook.
+9. SSL Kill Switch 3 strips authenticated arm64e function addresses before
+   passing them to `MSHookFunction`; the BoringSSL custom-verify callback remains
+   a typed function pointer so the compiler emits the required pointer
+   authentication metadata.
 
 ## Sources
 
