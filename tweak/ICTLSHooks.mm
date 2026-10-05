@@ -670,6 +670,7 @@ static NSUInteger ICInstallObjectiveCHooks(void) {
 
 #pragma mark - Dynamically linked native TLS
 
+#if !__has_feature(ptrauth_calls)
 typedef int (*ICBoringSSLVerifyCallback)(void *ssl, uint8_t *alert);
 typedef void (*ICSSLSetCustomVerify)(void *ssl, int mode, ICBoringSSLVerifyCallback callback);
 
@@ -718,6 +719,7 @@ static void ICReplacementSSLCTXSetVerify(void *sslContext, int mode, ICOpenSSLVe
         ICOriginalSSLCTXSetVerify(sslContext, mode, &ICOpenSSLAlwaysAllow);
     }
 }
+#endif
 
 static long (*ICOriginalSSLGetVerifyResult)(const void *ssl) = NULL;
 static long ICReplacementSSLGetVerifyResult(const void *ssl) {
