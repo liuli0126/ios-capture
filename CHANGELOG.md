@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.5 - 2026-10-05
+
+- Resolve `MSHookFunction` directly from Dopamine's rootless ElleKit runtime.
+- Rescan TLS and Objective-C hooks whenever a new Mach-O image is loaded.
+- Add asynchronous Security.framework and Network.framework verification hooks.
+- Add public `NSURLSession` server-trust delegate interception.
+- Add TTNet compatibility for `TTHttpTask` and `TTNetworkManagerChromium`.
+- Add optional HTTP/3 fallback by disabling known QUIC configuration objects and UDP/443.
+- Add a short direct-injection status banner showing Hook runtime availability and installed Hook count.
+
 ## 0.1.4 - 2026-10-05
 
 - Replaced direct-injection fishhook startup with delayed runtime resolution of the existing Dopamine Hook API.

@@ -180,7 +180,7 @@ extern char **environ;
         return 4;
     }
     if (section == 1) {
-        return 4;
+        return 5;
     }
     return self.filteredApplications.count;
 }
@@ -258,6 +258,7 @@ extern char **environ;
         @{@"title": @"插件启用", @"key": ICEnabledKey, @"default": @YES},
         @{@"title": @"TLS 兼容", @"key": ICTLSBypassEnabledKey, @"default": @YES},
         @{@"title": @"Native TLS", @"key": ICNativeTLSBypassEnabledKey, @"default": @NO},
+        @{@"title": @"HTTP/3 回退", @"key": ICHTTP3FallbackEnabledKey, @"default": @YES},
         @{@"title": @"诊断日志", @"key": ICDiagnosticsEnabledKey, @"default": @YES},
     ];
     NSDictionary *option = options[(NSUInteger)row];

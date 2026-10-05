@@ -13,9 +13,9 @@
 
 ## 当前状态
 
-v0.1.4 当前只验证 iOS 15+ Dopamine/rootless。包含目标 App 选择器、通用 TLS Hook、AFNetworking/TrustKit 兼容和可选 native TLS Hook。
+v0.1.5 当前只验证 iOS 15+ Dopamine/rootless。包含目标 App 选择器、通用 TLS Hook、TTNet 兼容、HTTP/3 回退和可选 native TLS Hook。
 
-- iOS 15+、Dopamine/ElleKit：安装 `com.ioscapture_0.1.4_iphoneos-arm64.deb`。
+- iOS 15+、Dopamine/ElleKit：安装 `com.ioscapture_0.1.5_iphoneos-arm64.deb`。
 - 巨魔注入器直注：使用 `iOSCaptureDirect-rootless.dylib`。直注版延迟调用当前 Dopamine 环境的 Hook 接口，不读取管理 App 的目标选择。
 - iOS 13 包内的 Hook 和管理 App 均包含 arm64 与 legacy arm64e，最低系统为 iOS 13.0。
 
@@ -24,12 +24,16 @@ v0.1.4 当前只验证 iOS 15+ Dopamine/rootless。包含目标 App 选择器、
 - [兼容性计划](docs/COMPATIBILITY.md)
 - [开发计划](PROJECT_PLAN.md)
 
-## v0.1.4 功能
+## v0.1.5 功能
 
 - 只对用户勾选的 App 启用 Hook。
 - `SecTrustEvaluate`、`SecTrustEvaluateWithError` 和 `SecTrustGetTrustResult`。
+- 异步 Security.framework 校验和 `sec_protocol_options_set_verify_block`。
+- 公共 `NSURLSession` 证书 challenge 处理。
 - AFNetworking `AFSecurityPolicy`。
 - TrustKit 验证与 challenge 处理。
+- 抖音/TikTok `TTHttpTask.skipSSLCertificateError` 和 `TTNetworkManagerChromium` 适配。
+- 可选 HTTP/3 回退，阻止目标 App 的 UDP/443 并关闭已知 TTNet QUIC 配置。
 - 可选 BoringSSL/OpenSSL 动态符号 Hook。
 - 打开 ProxyPin、保存设置并结束目标 App。
 - iOS 15+ rootless 和 iOS 13 rootful 独立 deb 构建。
@@ -58,12 +62,14 @@ python -m unittest discover -s tests -v
 
 管理 App 中“dylib 加载”出现目标 Bundle ID，说明 ElleKit 已把 dylib 加入目标进程；“Hook 启用”出现目标 Bundle ID，说明目标选择已读取并开始安装 TLS Hook。
 
-## v0.1.4 边界
+巨魔注入器直接注入后，目标 App 顶部会短暂显示状态条。绿色且 Hook 数量大于 0 表示 ElleKit Hook 接口可用；红色表示当前越狱环境未提供 Hook 接口。
+
+## v0.1.5 边界
 
 - 当前解决系统 TLS、AFNetworking、TrustKit，以及有动态导出符号的 BoringSSL/OpenSSL 校验。
 - 目标 App 自定义 AES、RSA、签名参数或 protobuf 业务层加密，需要拿到具体 App 和接口后增加专用 Hook。
 - 静态链接且无导出符号的 BoringSSL、Swift Trust 实现需要按目标 App 版本适配。
-- HTTP/3/QUIC 回退尚未实现；遇到 UDP/443 流量时需要目标 App 支持回退到 HTTP/2。
+- HTTP/3 回退要求目标服务支持 TCP/HTTP/2；只支持 QUIC 的请求在开启回退时会失败。
 - ProxyPin iOS 主工程面向 iOS 15+。iOS 13 可先使用电脑端代理；仅安装 TLS Hook 不会自动生成抓包列表。
 
 ## 已确认边界

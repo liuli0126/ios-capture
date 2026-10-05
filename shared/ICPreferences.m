@@ -9,6 +9,7 @@ NSString * const ICPreferencesChangedNotification = @"com.ioscapture.preferences
 NSString * const ICEnabledKey = @"enabled";
 NSString * const ICTLSBypassEnabledKey = @"tlsBypassEnabled";
 NSString * const ICNativeTLSBypassEnabledKey = @"nativeTLSBypassEnabled";
+NSString * const ICHTTP3FallbackEnabledKey = @"http3FallbackEnabled";
 NSString * const ICDiagnosticsEnabledKey = @"diagnosticsEnabled";
 NSString * const ICSelectedBundlesKey = @"selectedBundleIdentifiers";
 NSString * const ICLastLoadedBundleKey = @"lastLoadedBundleIdentifier";

@@ -12,6 +12,7 @@ FOUNDATION_EXPORT NSString * const ICPreferencesChangedNotification;
 FOUNDATION_EXPORT NSString * const ICEnabledKey;
 FOUNDATION_EXPORT NSString * const ICTLSBypassEnabledKey;
 FOUNDATION_EXPORT NSString * const ICNativeTLSBypassEnabledKey;
+FOUNDATION_EXPORT NSString * const ICHTTP3FallbackEnabledKey;
 FOUNDATION_EXPORT NSString * const ICDiagnosticsEnabledKey;
 FOUNDATION_EXPORT NSString * const ICSelectedBundlesKey;
 FOUNDATION_EXPORT NSString * const ICLastLoadedBundleKey;

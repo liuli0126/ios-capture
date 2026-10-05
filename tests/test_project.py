@@ -13,7 +13,7 @@ class ProjectTests(unittest.TestCase):
             info = plistlib.load(handle)
         self.assertEqual(info["CFBundleIdentifier"], "com.ioscapture.manager")
         self.assertEqual(info["MinimumOSVersion"], "13.0")
-        self.assertEqual(info["CFBundleShortVersionString"], "0.1.4")
+        self.assertEqual(info["CFBundleShortVersionString"], "0.1.5")
 
         makefile = (ROOT / "manager" / "Makefile").read_text(encoding="utf-8")
         self.assertIn("-S$(THEOS_PROJECT_DIR)/manager/Entitlements.plist", makefile)
@@ -55,12 +55,18 @@ class ProjectTests(unittest.TestCase):
         expected = {
             "SecTrustEvaluate",
             "SecTrustEvaluateWithError",
+            "SecTrustEvaluateAsync",
+            "SecTrustEvaluateAsyncWithError",
             "SecTrustGetTrustResult",
+            "sec_protocol_options_set_verify_block",
             "AFSecurityPolicy",
             "TSKPinningValidator",
+            "TTHttpTask",
+            "TTNetworkManagerChromium",
             "SSL_set_custom_verify",
             "SSL_CTX_set_custom_verify",
             "SSL_get_verify_result",
+            "X509_verify_cert",
         }
         missing = {marker for marker in expected if marker not in source}
         self.assertFalse(missing)
@@ -93,9 +99,13 @@ class ProjectTests(unittest.TestCase):
         self.assertNotIn("ICIsCurrentProcessSelected", direct_branch)
         self.assertNotIn("ICMarkCurrentProcessLoaded", direct_branch)
         self.assertNotIn("ICMarkCurrentProcessInjected", direct_branch)
-        self.assertIn("nativeTLSBypassEnabled = YES", hooks)
+        self.assertIn("ICNativeTLSHooksEnabled = YES", hooks)
+        self.assertIn("ICHTTP3FallbackEnabled = YES", hooks)
         self.assertIn('dlsym(RTLD_DEFAULT, "MSHookFunction")', hooks)
         self.assertIn('dlopen(candidatePaths[index], RTLD_LAZY | RTLD_GLOBAL)', hooks)
+        self.assertIn('/var/jb/usr/lib/libellekit.dylib', hooks)
+        self.assertIn('_dyld_register_func_for_add_image', hooks)
+        self.assertIn('ICReplacementConnect', hooks)
         self.assertIn("dispatch_after", direct_branch)
 
     def test_rootful_and_rootless_controls(self):
@@ -107,7 +117,7 @@ class ProjectTests(unittest.TestCase):
         self.assertIn("firmware (>= 13.0)", rootful)
         for control in (rootless, rootful):
             self.assertIn("Package: com.ioscapture", control)
-            self.assertRegex(control, r"(?m)^Version: 0\.1\.4$")
+            self.assertRegex(control, r"(?m)^Version: 0\.1\.5$")
 
     def test_project_sources_do_not_depend_on_applelive(self):
         source_roots = (ROOT / "shared", ROOT / "tweak", ROOT / "manager")
