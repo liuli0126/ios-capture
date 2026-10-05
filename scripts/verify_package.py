@@ -40,7 +40,7 @@ def verify(root: Path, scheme: str) -> None:
     with filter_plist.open("rb") as handle:
         filter_configuration = plistlib.load(handle)
     filter_rules = filter_configuration.get("Filter", {})
-    if "UIApplication" not in filter_rules.get("Classes", []) or "Executables" in filter_rules:
+    if filter_rules.get("Bundles") != ["com.apple.UIKit"] or "Classes" in filter_rules:
         raise ValueError("unexpected tweak injection filter")
 
     with info_path.open("rb") as handle:

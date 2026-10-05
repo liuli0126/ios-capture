@@ -13,6 +13,7 @@ class ProjectTests(unittest.TestCase):
             info = plistlib.load(handle)
         self.assertEqual(info["CFBundleIdentifier"], "com.ioscapture.manager")
         self.assertEqual(info["MinimumOSVersion"], "13.0")
+        self.assertEqual(info["CFBundleShortVersionString"], "0.1.1")
 
         makefile = (ROOT / "manager" / "Makefile").read_text(encoding="utf-8")
         self.assertIn("-S$(THEOS_PROJECT_DIR)/manager/Entitlements.plist", makefile)
@@ -62,7 +63,8 @@ class ProjectTests(unittest.TestCase):
         with (ROOT / "tweak" / "iOSCaptureHook.plist").open("rb") as handle:
             filter_configuration = plistlib.load(handle)
         filter_rules = filter_configuration["Filter"]
-        self.assertEqual(filter_rules["Classes"], ["UIApplication"])
+        self.assertEqual(filter_rules["Bundles"], ["com.apple.UIKit"])
+        self.assertNotIn("Classes", filter_rules)
         self.assertNotIn("Executables", filter_rules)
 
     def test_rootful_and_rootless_controls(self):
@@ -74,7 +76,7 @@ class ProjectTests(unittest.TestCase):
         self.assertIn("firmware (>= 13.0)", rootful)
         for control in (rootless, rootful):
             self.assertIn("Package: com.ioscapture", control)
-            self.assertRegex(control, r"(?m)^Version: 0\.1\.0$")
+            self.assertRegex(control, r"(?m)^Version: 0\.1\.1$")
 
     def test_project_sources_do_not_depend_on_applelive(self):
         source_roots = (ROOT / "shared", ROOT / "tweak", ROOT / "manager")

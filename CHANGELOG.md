@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 - 2026-10-05
+
+- Replaced the early `UIApplication` class filter with an ElleKit-compatible UIKit bundle filter.
+- Added package verification that rejects the ineffective class filter.
+
 ## 0.1.0 - 2026-10-04
 
 - Added a standalone jailbreak iOS packet-capture companion project.
