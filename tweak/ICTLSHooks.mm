@@ -7,7 +7,7 @@
 #import <dlfcn.h>
 #import <objc/runtime.h>
 #if defined(IOSCAPTURE_DIRECT_INJECTION)
-#import "fishhook.h"
+#import "third_party/fishhook/fishhook.h"
 #else
 #import <substrate.h>
 #endif
