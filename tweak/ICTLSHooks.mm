@@ -241,9 +241,11 @@ NSString *ICCopyTLSHookStatusSummary(void) {
         if (!imageName) {
             continue;
         }
-        hasTTImage |= strcasestr(imageName, "TTNetwork") || strcasestr(imageName, "ByteDance");
-        hasCronetImage |= strcasestr(imageName, "cronet") || strcasestr(imageName, "boringssl");
-        hasVCNImage |= strcasestr(imageName, "libvcn");
+        hasTTImage |= strcasestr(imageName, "TTNetwork") != NULL ||
+                      strcasestr(imageName, "ByteDance") != NULL;
+        hasCronetImage |= strcasestr(imageName, "cronet") != NULL ||
+                          strcasestr(imageName, "boringssl") != NULL;
+        hasVCNImage |= strcasestr(imageName, "libvcn") != NULL;
     }
 
     return [NSString stringWithFormat:
