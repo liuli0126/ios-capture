@@ -8,6 +8,8 @@
 | WI-004 | Map Android Hook layers to iOS | lead | proposed product | architecture | done | E-002, E-005 | Security.framework through native TLS |
 | WI-005 | Produce reproducible prototype guide | lead | proposed product | documentation | done | E-003, E-004 | Separate iOS 13/14 and 15+ paths |
 | WI-006 | Define compatibility and delivery plan | lead | proposed product | packaging | done | E-004, E-005 | Separate rootful/rootless packages |
+| WI-007 | Research modern Dopamine and TTNet trust paths | lead | public source | static | done | E-006 | ElleKit, TTHttpTask, async trust, QUIC |
+| WI-008 | Build and verify v0.1.5 rootless artifacts | lead | iOS 15+ package | build | done | E-007 | Runtime device capture remains pending |
 
 ## Coverage
 - [x] Recon/analysis complete for in-scope reference assets

@@ -29,3 +29,13 @@
 - decision_delta: [capture_layer=ProxyPin_iOS_or_desktop, hook_layer=native_iOS_dylib, delivery=rootful_and_rootless]
 - carry_forward_refs: [scope.md, workitems.md]
 - next: build a controlled iOS 15 rootless prototype and then the iOS 13 rootful variant
+
+## 2026-10-05T11:45:00+08:00 | lead | rootless-v0.1.5
+- action: Reviewed public modern rootless and ByteDance networking implementations, added missing trust paths, and built the iOS 15+ release.
+- command_or_ref: GitHub Actions run 37260280455; docs/PUBLIC_RESEARCH.md
+- result_summary: v0.1.5 direct dylib resolves ElleKit, covers TTNet and async trust, forces optional HTTP/2 fallback, reports Hook count, and passes arm64/arm64e and dependency verification.
+- artifacts: [evidence/E-006.md, evidence/E-007.md, docs/PUBLIC_RESEARCH.md, 交付文件/v0.1.5/iOSCaptureDirect-rootless-v0.1.5.dylib]
+- evidence_ids: [E-006, E-007]
+- decision_delta: [runtime=ElleKit_first, diagnostics=visible_hook_count, quic=udp443_fallback]
+- carry_forward_refs: [scope.md, workitems.md]
+- next: verify Safari baseline, then test v0.1.5 in the authorized Douyin process and collect the exact App version only if private libvcn remains pinned

@@ -59,3 +59,18 @@
   2. Observe request bodies in an authorized test App after TLS unpinning.
 - remediation: Add opt-in CommonCrypto/Security hooks and target-specific decoding rules.
 - optional_attack:
+
+### F-005
+- title: The previous direct build could launch while all C hooks remained inactive
+- severity: n/a_re
+- category: implementation
+- status: validated
+- evidence_ids: [E-006, E-007]
+- location: direct-injection Hook runtime resolution
+- impact: Resolving only Substrate paths is insufficient on Dopamine/ElleKit and can present as a successful injection with no captured traffic.
+- confidence: high
+- repro_steps:
+  1. Compare Dopamine's rootless ElleKit path with the v0.1.4 candidate paths.
+  2. Build v0.1.5 and confirm explicit `libellekit.dylib` runtime resolution.
+- remediation: Resolve ElleKit first, expose Hook count in the target App, and rescan when new Mach-O images load.
+- optional_attack:

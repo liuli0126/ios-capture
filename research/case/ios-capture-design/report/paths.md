@@ -11,4 +11,4 @@
   3. action: ProxyPin Packet Tunnel routes HTTP/HTTPS traffic through its proxy — evidence: E-003 — finding: F-002
   4. action: ProxyPin records, filters, rewrites or exports the request — evidence: E-003, E-004 — finding: F-002
   5. action: Optional per-App adapter observes application-layer encryption before or after crypto calls — evidence: E-005 — finding: F-004
-- residual_risks: QUIC without TCP fallback, statically linked native TLS, jailbreak detection, target-specific payload encryption, and untested iOS versions.
+- residual_risks: QUIC endpoints without TCP fallback, private or statically linked libvcn/BoringSSL, jailbreak detection, target-specific payload encryption, and untested target App versions.
