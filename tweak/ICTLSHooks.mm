@@ -14,9 +14,6 @@
 #import <stdatomic.h>
 #import <string.h>
 #import <sys/socket.h>
-#if __has_feature(ptrauth_calls)
-#import <ptrauth.h>
-#endif
 #if !defined(IOSCAPTURE_DIRECT_INJECTION)
 #import <substrate.h>
 #endif
@@ -190,11 +187,6 @@ static BOOL ICInstallNativeFunctionHook(const char *name, void *replacement, voi
         return NO;
     }
     void *symbol = ICResolveNativeTLSSymbol(name);
-#if __has_feature(ptrauth_calls)
-    if (symbol) {
-        symbol = ptrauth_strip(symbol, ptrauth_key_function_pointer);
-    }
-#endif
 #if defined(IOSCAPTURE_DIRECT_INJECTION)
     ICMSHookFunction hookFunction = ICResolveRuntimeHookFunction();
     if (!symbol || !hookFunction) {
@@ -249,7 +241,7 @@ NSString *ICCopyTLSHookStatusSummary(void) {
     }
 
     return [NSString stringWithFormat:
-        @"iOS Capture 0.1.6  install/hit\nS%lu/%lu U%lu/%lu TT%lu/%lu N%lu/%lu Q%lu/%lu\nObj%lu Img T%d C%d V%d",
+        @"iOS Capture 0.1.7  install/hit\nS%lu/%lu U%lu/%lu TT%lu/%lu N%lu/%lu Q%lu/%lu\nObj%lu Img T%d C%d V%d",
         installed[ICHookCategorySystem], hits[ICHookCategorySystem],
         installed[ICHookCategoryURLSession], hits[ICHookCategoryURLSession],
         installed[ICHookCategoryTTNet], hits[ICHookCategoryTTNet],
@@ -811,6 +803,7 @@ static NSUInteger ICInstallObjectiveCHooks(void) {
 
 #pragma mark - Dynamically linked native TLS
 
+#if !__has_feature(ptrauth_calls)
 typedef int (*ICBoringSSLVerifyCallback)(void *ssl, uint8_t *alert);
 typedef void (*ICSSLSetCustomVerify)(void *ssl, int mode, ICBoringSSLVerifyCallback callback);
 
@@ -840,7 +833,6 @@ static void ICReplacementSSLCTXSetCustomVerify(void *sslContext,
     }
 }
 
-#if !__has_feature(ptrauth_calls)
 typedef int (*ICOpenSSLVerifyCallback)(int preverifyOK, void *storeContext);
 typedef void (*ICSSLSetVerify)(void *ssl, int mode, ICOpenSSLVerifyCallback callback);
 
@@ -887,6 +879,7 @@ static const char *ICReplacementSSLGetPSKIdentity(const void *ssl) {
 static NSUInteger ICInstallNativeTLSHooks(void) {
     NSUInteger count = 0;
 
+#if !__has_feature(ptrauth_calls)
     if (ICInstallNativeFunctionHook("SSL_set_custom_verify",
                                     reinterpret_cast<void *>(&ICReplacementSSLSetCustomVerify),
                                     reinterpret_cast<void **>(&ICOriginalSSLSetCustomVerify))) {
@@ -899,7 +892,6 @@ static NSUInteger ICInstallNativeTLSHooks(void) {
         count++;
     }
 
-#if !__has_feature(ptrauth_calls)
     if (ICInstallNativeFunctionHook("SSL_set_verify",
                                     reinterpret_cast<void *>(&ICReplacementSSLSetVerify),
                                     reinterpret_cast<void **>(&ICOriginalSSLSetVerify))) {

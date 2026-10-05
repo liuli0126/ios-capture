@@ -75,10 +75,13 @@ static void ICShowHookStatus(void) {
 %ctor {
     @autoreleasepool {
 #if defined(IOSCAPTURE_DIRECT_INJECTION)
-        ICInstallTLSHooks();
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)),
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)),
                        dispatch_get_main_queue(), ^{
-            ICShowHookStatus();
+            ICInstallTLSHooks();
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)),
+                           dispatch_get_main_queue(), ^{
+                ICShowHookStatus();
+            });
         });
 #else
         ICMarkCurrentProcessLoaded();

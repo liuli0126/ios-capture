@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.7 - 2026-10-05
+
+- Restore the stable delayed direct-injection startup sequence used by v0.1.5.
+- Disable BoringSSL callback replacement on arm64e after the v0.1.6 runtime crash report.
+- Keep the TTNet certificate-list, task-resume, generic selector, and categorized diagnostics fixes.
+
 ## 0.1.6 - 2026-10-05
 
 - Install direct-injection hooks during process construction so TTNet startup configuration is not missed.
