@@ -274,12 +274,20 @@ void ICInstallTLSHooks(void) {
         NSString *bundleIdentifier = NSBundle.mainBundle.bundleIdentifier ?: @"unknown";
         NSUInteger installed = 0;
 
-        if (ICBoolPreference(ICTLSBypassEnabledKey, YES)) {
+#if defined(IOSCAPTURE_DIRECT_INJECTION)
+        BOOL tlsBypassEnabled = YES;
+        BOOL nativeTLSBypassEnabled = YES;
+#else
+        BOOL tlsBypassEnabled = ICBoolPreference(ICTLSBypassEnabledKey, YES);
+        BOOL nativeTLSBypassEnabled = ICBoolPreference(ICNativeTLSBypassEnabledKey, NO);
+#endif
+
+        if (tlsBypassEnabled) {
             installed += ICInstallSecurityHooks();
             installed += ICInstallObjectiveCHooks();
         }
 
-        if (ICBoolPreference(ICNativeTLSBypassEnabledKey, NO)) {
+        if (nativeTLSBypassEnabled) {
             installed += ICInstallNativeTLSHooks();
         }
 

@@ -177,7 +177,7 @@ extern char **environ;
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     if (section == 0) {
-        return 3;
+        return 4;
     }
     if (section == 1) {
         return 4;
@@ -233,9 +233,11 @@ extern char **environ;
         return;
     }
 
-    cell.textLabel.text = @"最近注入";
-    NSString *bundleIdentifier = ICCopyPreference(ICLastInjectedBundleKey);
-    NSDate *date = ICCopyPreference(ICLastInjectedDateKey);
+    NSString *bundleKey = row == 2 ? ICLastLoadedBundleKey : ICLastInjectedBundleKey;
+    NSString *dateKey = row == 2 ? ICLastLoadedDateKey : ICLastInjectedDateKey;
+    cell.textLabel.text = row == 2 ? @"dylib 加载" : @"Hook 启用";
+    NSString *bundleIdentifier = ICCopyPreference(bundleKey);
+    NSDate *date = ICCopyPreference(dateKey);
     if ([bundleIdentifier isKindOfClass:NSString.class] && bundleIdentifier.length > 0) {
         if ([date isKindOfClass:NSDate.class]) {
             NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
@@ -323,6 +325,10 @@ extern char **environ;
 - (void)applyAndRestart {
     NSArray *sorted = [self.selectedBundles.allObjects sortedArrayUsingSelector:@selector(compare:)];
     ICSetSelectedBundleIdentifiers(sorted);
+    ICSetPreference(ICLastLoadedBundleKey, nil);
+    ICSetPreference(ICLastLoadedDateKey, nil);
+    ICSetPreference(ICLastInjectedBundleKey, nil);
+    ICSetPreference(ICLastInjectedDateKey, nil);
 
     NSMutableSet<NSString *> *executables = [NSMutableSet set];
     for (LSApplicationProxy *proxy in self.applications) {

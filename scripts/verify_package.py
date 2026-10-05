@@ -22,7 +22,9 @@ def exactly_one(root: Path, name: str) -> Path:
 
 def verify(root: Path, scheme: str) -> None:
     hook = exactly_one(root, "iOSCaptureHook.dylib")
+    direct_hook = exactly_one(root, "iOSCaptureDirect.dylib")
     filter_plist = exactly_one(root, "iOSCaptureHook.plist")
+    direct_filter_plist = exactly_one(root, "iOSCaptureDirect.plist")
     app = exactly_one(root, "iOSCapture.app")
     executable = app / "iOSCapture"
     info_path = app / "Info.plist"
@@ -37,11 +39,27 @@ def verify(root: Path, scheme: str) -> None:
     if missing:
         raise ValueError("hook dylib is missing markers: " + ", ".join(missing))
 
+    direct_hook_bytes = direct_hook.read_bytes()
+    missing_direct = [marker.decode("ascii") for marker in REQUIRED_HOOK_MARKERS if marker not in direct_hook_bytes]
+    if missing_direct:
+        raise ValueError("direct hook dylib is missing markers: " + ", ".join(missing_direct))
+
     with filter_plist.open("rb") as handle:
         filter_configuration = plistlib.load(handle)
     filter_rules = filter_configuration.get("Filter", {})
-    if filter_rules.get("Bundles") != ["com.apple.UIKit"] or "Classes" in filter_rules:
+    required_bundles = {
+        "com.apple.UIKit",
+        "com.ss.iphone.ugc.Aweme",
+        "com.zhiliaoapp.musically",
+    }
+    if not required_bundles.issubset(set(filter_rules.get("Bundles", []))) or "Classes" in filter_rules:
         raise ValueError("unexpected tweak injection filter")
+
+    with direct_filter_plist.open("rb") as handle:
+        direct_filter_configuration = plistlib.load(handle)
+    direct_filter_rules = direct_filter_configuration.get("Filter", {})
+    if direct_filter_rules.get("Bundles") != ["com.ioscapture.direct.manual-only"]:
+        raise ValueError("direct hook must remain manual-injection only")
 
     with info_path.open("rb") as handle:
         info = plistlib.load(handle)
@@ -55,6 +73,7 @@ def verify(root: Path, scheme: str) -> None:
 
     print(f"verified {scheme} package")
     print(f"hook={hook}")
+    print(f"direct_hook={direct_hook}")
     print(f"manager={app}")
 
 

@@ -81,13 +81,19 @@ jobs:
           dpkg-deb -x "$package" "$RUNNER_TEMP/package-rootful"
           python3 scripts/verify_package.py "$RUNNER_TEMP/package-rootful" --scheme rootful
           hook=$(find "$RUNNER_TEMP/package-rootful" -name iOSCaptureHook.dylib -type f -print -quit)
+          direct_hook=$(find "$RUNNER_TEMP/package-rootful" -name iOSCaptureDirect.dylib -type f -print -quit)
           manager=$(find "$RUNNER_TEMP/package-rootful" -path '*/iOSCapture.app/iOSCapture' -type f -print -quit)
           python3 scripts/verify_ios13_abi.py "$hook"
+          python3 scripts/verify_ios13_abi.py "$direct_hook"
           python3 scripts/verify_ios13_abi.py "$manager"
+          mkdir -p artifacts
+          cp "$direct_hook" artifacts/iOSCaptureDirect-ios13-rootful.dylib
 
       - name: Upload rootful deb
         uses: actions/upload-artifact@v4
         with:
           name: iOSCapture-iOS13-rootful
-          path: packages/*_iphoneos-arm.deb
+          path: |
+            packages/*_iphoneos-arm.deb
+            artifacts/iOSCaptureDirect-ios13-rootful.dylib
           if-no-files-found: error

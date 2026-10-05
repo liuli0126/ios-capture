@@ -14,6 +14,8 @@ FOUNDATION_EXPORT NSString * const ICTLSBypassEnabledKey;
 FOUNDATION_EXPORT NSString * const ICNativeTLSBypassEnabledKey;
 FOUNDATION_EXPORT NSString * const ICDiagnosticsEnabledKey;
 FOUNDATION_EXPORT NSString * const ICSelectedBundlesKey;
+FOUNDATION_EXPORT NSString * const ICLastLoadedBundleKey;
+FOUNDATION_EXPORT NSString * const ICLastLoadedDateKey;
 FOUNDATION_EXPORT NSString * const ICLastInjectedBundleKey;
 FOUNDATION_EXPORT NSString * const ICLastInjectedDateKey;
 
@@ -27,6 +29,7 @@ id _Nullable ICCopyPreference(NSString *key);
 void ICSetPreference(NSString *key, id _Nullable value);
 
 BOOL ICIsCurrentProcessSelected(void);
+void ICMarkCurrentProcessLoaded(void);
 void ICMarkCurrentProcessInjected(void);
 NSString *ICJailbreakEnvironmentDescription(void);
 

@@ -6,9 +6,7 @@
     <dict>
         <key>Bundles</key>
         <array>
-            <string>com.apple.UIKit</string>
-            <string>com.ss.iphone.ugc.Aweme</string>
-            <string>com.zhiliaoapp.musically</string>
+            <string>com.ioscapture.direct.manual-only</string>
         </array>
     </dict>
 </dict>

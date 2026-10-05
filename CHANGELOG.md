@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 - 2026-10-05
+
+- Added explicit Douyin and TikTok bundle filters for reliable ElleKit injection.
+- Split dylib loading and active Hook status so injection and preference failures can be distinguished.
+- Clear stale injection status whenever the selected targets are applied.
+- Added direct-injection dylibs for TrollStore injection tools; these bypass target selection and enable native TLS automatically.
+
 ## 0.1.1 - 2026-10-05
 
 - Replaced the early `UIApplication` class filter with an ElleKit-compatible UIKit bundle filter.

@@ -13,7 +13,7 @@ class ProjectTests(unittest.TestCase):
             info = plistlib.load(handle)
         self.assertEqual(info["CFBundleIdentifier"], "com.ioscapture.manager")
         self.assertEqual(info["MinimumOSVersion"], "13.0")
-        self.assertEqual(info["CFBundleShortVersionString"], "0.1.1")
+        self.assertEqual(info["CFBundleShortVersionString"], "0.1.2")
 
         makefile = (ROOT / "manager" / "Makefile").read_text(encoding="utf-8")
         self.assertIn("-S$(THEOS_PROJECT_DIR)/manager/Entitlements.plist", makefile)
@@ -26,7 +26,11 @@ class ProjectTests(unittest.TestCase):
         self.assertIn('ICPreferencesDomain = @"com.ioscapture.settings"', preferences)
         self.assertIn("ICSetSelectedBundleIdentifiers", manager)
         self.assertIn("ICIsCurrentProcessSelected", tweak)
-        self.assertLess(tweak.index("ICIsCurrentProcessSelected"), tweak.index("ICInstallTLSHooks"))
+        self.assertIn("ICMarkCurrentProcessLoaded", tweak)
+        self.assertLess(tweak.index("ICMarkCurrentProcessLoaded"), tweak.index("ICIsCurrentProcessSelected"))
+        automatic_branch = tweak.split("#else", 1)[1].split("#endif", 1)[0]
+        self.assertLess(automatic_branch.index("ICIsCurrentProcessSelected"),
+                        automatic_branch.index("ICInstallTLSHooks"))
 
     def test_subprojects_include_shared_headers_from_project_root(self):
         for relative_makefile in ("tweak/Makefile", "manager/Makefile"):
@@ -63,9 +67,27 @@ class ProjectTests(unittest.TestCase):
         with (ROOT / "tweak" / "iOSCaptureHook.plist").open("rb") as handle:
             filter_configuration = plistlib.load(handle)
         filter_rules = filter_configuration["Filter"]
-        self.assertEqual(filter_rules["Bundles"], ["com.apple.UIKit"])
+        self.assertIn("com.apple.UIKit", filter_rules["Bundles"])
+        self.assertIn("com.ss.iphone.ugc.Aweme", filter_rules["Bundles"])
+        self.assertIn("com.zhiliaoapp.musically", filter_rules["Bundles"])
         self.assertNotIn("Classes", filter_rules)
         self.assertNotIn("Executables", filter_rules)
+
+        with (ROOT / "tweak" / "iOSCaptureDirect.plist").open("rb") as handle:
+            direct_filter = plistlib.load(handle)["Filter"]
+        self.assertEqual(direct_filter["Bundles"], ["com.ioscapture.direct.manual-only"])
+
+    def test_direct_injection_build_does_not_require_target_selection(self):
+        makefile = (ROOT / "tweak" / "Makefile").read_text(encoding="utf-8")
+        tweak = (ROOT / "tweak" / "Tweak.xm").read_text(encoding="utf-8")
+        hooks = (ROOT / "tweak" / "ICTLSHooks.mm").read_text(encoding="utf-8")
+        self.assertIn("TWEAK_NAME = iOSCaptureHook iOSCaptureDirect", makefile)
+        self.assertIn("-DIOSCAPTURE_DIRECT_INJECTION=1", makefile)
+        self.assertIn("#if defined(IOSCAPTURE_DIRECT_INJECTION)", tweak)
+        direct_branch = tweak.split("#if defined(IOSCAPTURE_DIRECT_INJECTION)", 1)[1].split("#else", 1)[0]
+        self.assertIn("ICInstallTLSHooks", direct_branch)
+        self.assertNotIn("ICIsCurrentProcessSelected", direct_branch)
+        self.assertIn("nativeTLSBypassEnabled = YES", hooks)
 
     def test_rootful_and_rootless_controls(self):
         rootless = (ROOT / "control").read_text(encoding="utf-8")
@@ -76,7 +98,7 @@ class ProjectTests(unittest.TestCase):
         self.assertIn("firmware (>= 13.0)", rootful)
         for control in (rootless, rootful):
             self.assertIn("Package: com.ioscapture", control)
-            self.assertRegex(control, r"(?m)^Version: 0\.1\.1$")
+            self.assertRegex(control, r"(?m)^Version: 0\.1\.2$")
 
     def test_project_sources_do_not_depend_on_applelive(self):
         source_roots = (ROOT / "shared", ROOT / "tweak", ROOT / "manager")

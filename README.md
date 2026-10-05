@@ -13,10 +13,11 @@
 
 ## 当前状态
 
-v0.1.1 已完成编译和包体校验。包含目标 App 选择器、通用 TLS Hook、AFNetworking/TrustKit 兼容、可选 native TLS Hook，以及 rootless/rootful 构建流水线。
+v0.1.2 已完成开发。包含目标 App 选择器、通用 TLS Hook、AFNetworking/TrustKit 兼容、可选 native TLS Hook，以及 rootless/rootful 构建流水线。
 
-- iOS 15+、Dopamine/ElleKit：安装 `com.ioscapture_0.1.1_iphoneos-arm64.deb`。
-- iOS 13、unc0ver/Substitute：安装 `com.ioscapture_0.1.1_iphoneos-arm.deb`。
+- iOS 15+、Dopamine/ElleKit：安装 `com.ioscapture_0.1.2_iphoneos-arm64.deb`。
+- iOS 13、unc0ver/Substitute：安装 `com.ioscapture_0.1.2_iphoneos-arm.deb`。
+- 巨魔注入器直注：iOS 15+ 使用 `iOSCaptureDirect-rootless.dylib`；iOS 13 使用 `iOSCaptureDirect-ios13-rootful.dylib`。直注版默认启用 TLS 与 Native TLS，不读取管理 App 的目标选择。
 - iOS 13 包内的 Hook 和管理 App 均包含 arm64 与 legacy arm64e，最低系统为 iOS 13.0。
 
 - [架构与可行性](docs/ARCHITECTURE.md)
@@ -24,7 +25,7 @@ v0.1.1 已完成编译和包体校验。包含目标 App 选择器、通用 TLS 
 - [兼容性计划](docs/COMPATIBILITY.md)
 - [开发计划](PROJECT_PLAN.md)
 
-## v0.1.1 功能
+## v0.1.2 功能
 
 - 只对用户勾选的 App 启用 Hook。
 - `SecTrustEvaluate`、`SecTrustEvaluateWithError` 和 `SecTrustGetTrustResult`。
@@ -56,9 +57,9 @@ python -m unittest discover -s tests -v
 5. 在 ProxyPin 中启动 VPN 抓包，再打开目标 App 发起请求。
 6. 普通 HTTPS 能看到、但特定接口仍失败时，再打开 `Native TLS` 后重新应用。该选项只建议按需开启。
 
-管理 App 中“最近注入”出现目标 Bundle ID，说明 dylib 已进入目标进程。未出现时先确认选择已保存、目标 App 已完全结束，以及对应注入框架已启用。
+管理 App 中“dylib 加载”出现目标 Bundle ID，说明 ElleKit 已把 dylib 加入目标进程；“Hook 启用”出现目标 Bundle ID，说明目标选择已读取并开始安装 TLS Hook。
 
-## v0.1.1 边界
+## v0.1.2 边界
 
 - 当前解决系统 TLS、AFNetworking、TrustKit，以及有动态导出符号的 BoringSSL/OpenSSL 校验。
 - 目标 App 自定义 AES、RSA、签名参数或 protobuf 业务层加密，需要拿到具体 App 和接口后增加专用 Hook。

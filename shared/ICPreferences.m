@@ -11,6 +11,8 @@ NSString * const ICTLSBypassEnabledKey = @"tlsBypassEnabled";
 NSString * const ICNativeTLSBypassEnabledKey = @"nativeTLSBypassEnabled";
 NSString * const ICDiagnosticsEnabledKey = @"diagnosticsEnabled";
 NSString * const ICSelectedBundlesKey = @"selectedBundleIdentifiers";
+NSString * const ICLastLoadedBundleKey = @"lastLoadedBundleIdentifier";
+NSString * const ICLastLoadedDateKey = @"lastLoadedDate";
 NSString * const ICLastInjectedBundleKey = @"lastInjectedBundleIdentifier";
 NSString * const ICLastInjectedDateKey = @"lastInjectedDate";
 
@@ -84,6 +86,17 @@ BOOL ICIsCurrentProcessSelected(void) {
         return NO;
     }
     return [ICSelectedBundleIdentifiers() containsObject:bundleIdentifier];
+}
+
+void ICMarkCurrentProcessLoaded(void) {
+    NSString *bundleIdentifier = NSBundle.mainBundle.bundleIdentifier;
+    if (bundleIdentifier.length == 0 ||
+        [bundleIdentifier isEqualToString:@"com.ioscapture.manager"] ||
+        [bundleIdentifier isEqualToString:@"com.proxy.pin"]) {
+        return;
+    }
+    ICSetPreference(ICLastLoadedBundleKey, bundleIdentifier);
+    ICSetPreference(ICLastLoadedDateKey, NSDate.date);
 }
 
 void ICMarkCurrentProcessInjected(void) {
