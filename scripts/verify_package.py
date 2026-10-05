@@ -43,6 +43,11 @@ def verify(root: Path, scheme: str) -> None:
     missing_direct = [marker.decode("ascii") for marker in REQUIRED_HOOK_MARKERS if marker not in direct_hook_bytes]
     if missing_direct:
         raise ValueError("direct hook dylib is missing markers: " + ", ".join(missing_direct))
+    forbidden_direct_dependencies = (b"CydiaSubstrate", b"libsubstrate")
+    if any(marker in direct_hook_bytes for marker in forbidden_direct_dependencies):
+        raise ValueError("direct hook dylib must not depend on Substrate")
+    if b"rebind_symbols" not in direct_hook_bytes:
+        raise ValueError("direct hook dylib is missing standalone symbol rebinding")
 
     with filter_plist.open("rb") as handle:
         filter_configuration = plistlib.load(handle)

@@ -6,14 +6,20 @@
 #import <Security/Security.h>
 #import <dlfcn.h>
 #import <objc/runtime.h>
+#if defined(IOSCAPTURE_DIRECT_INJECTION)
+#import "fishhook.h"
+#else
 #import <substrate.h>
+#endif
 
 static void ICLog(NSString *format, ...) NS_FORMAT_FUNCTION(1, 2);
 
 static void ICLog(NSString *format, ...) {
+#if !defined(IOSCAPTURE_DIRECT_INJECTION)
     if (!ICBoolPreference(ICDiagnosticsEnabledKey, YES)) {
         return;
     }
+#endif
 
     va_list arguments;
     va_start(arguments, format);
@@ -34,6 +40,20 @@ static void *ICResolveSymbol(const char *name) {
         securityHandle = dlopen("/System/Library/Frameworks/Security.framework/Security", RTLD_LAZY);
     });
     return securityHandle ? dlsym(securityHandle, name) : NULL;
+}
+
+static BOOL ICInstallFunctionHook(const char *name, void *replacement, void **original) {
+#if defined(IOSCAPTURE_DIRECT_INJECTION)
+    struct rebinding binding = {name, replacement, original};
+    return rebind_symbols(&binding, 1) == 0;
+#else
+    void *symbol = ICResolveSymbol(name);
+    if (!symbol) {
+        return NO;
+    }
+    MSHookFunction(symbol, replacement, original);
+    return YES;
+#endif
 }
 
 #pragma mark - Security.framework
@@ -65,27 +85,21 @@ static OSStatus ICReplacementSecTrustGetTrustResult(SecTrustRef trust, SecTrustR
 static NSUInteger ICInstallSecurityHooks(void) {
     NSUInteger count = 0;
 
-    void *evaluate = ICResolveSymbol("SecTrustEvaluate");
-    if (evaluate) {
-        MSHookFunction(evaluate,
-                       reinterpret_cast<void *>(&ICReplacementSecTrustEvaluate),
-                       reinterpret_cast<void **>(&ICOriginalSecTrustEvaluate));
+    if (ICInstallFunctionHook("SecTrustEvaluate",
+                              reinterpret_cast<void *>(&ICReplacementSecTrustEvaluate),
+                              reinterpret_cast<void **>(&ICOriginalSecTrustEvaluate))) {
         count++;
     }
 
-    void *evaluateWithError = ICResolveSymbol("SecTrustEvaluateWithError");
-    if (evaluateWithError) {
-        MSHookFunction(evaluateWithError,
-                       reinterpret_cast<void *>(&ICReplacementSecTrustEvaluateWithError),
-                       reinterpret_cast<void **>(&ICOriginalSecTrustEvaluateWithError));
+    if (ICInstallFunctionHook("SecTrustEvaluateWithError",
+                              reinterpret_cast<void *>(&ICReplacementSecTrustEvaluateWithError),
+                              reinterpret_cast<void **>(&ICOriginalSecTrustEvaluateWithError))) {
         count++;
     }
 
-    void *getTrustResult = ICResolveSymbol("SecTrustGetTrustResult");
-    if (getTrustResult) {
-        MSHookFunction(getTrustResult,
-                       reinterpret_cast<void *>(&ICReplacementSecTrustGetTrustResult),
-                       reinterpret_cast<void **>(&ICOriginalSecTrustGetTrustResult));
+    if (ICInstallFunctionHook("SecTrustGetTrustResult",
+                              reinterpret_cast<void *>(&ICReplacementSecTrustGetTrustResult),
+                              reinterpret_cast<void **>(&ICOriginalSecTrustGetTrustResult))) {
         count++;
     }
 
@@ -125,6 +139,22 @@ static BOOL ICReplacementTrustKitHandleChallenge(id self,
         : NO;
 }
 
+static BOOL ICInstallMessageHook(Class targetClass, SEL selector, IMP replacement, IMP *original) {
+    Method method = targetClass ? class_getInstanceMethod(targetClass, selector) : NULL;
+    if (!method) {
+        return NO;
+    }
+#if defined(IOSCAPTURE_DIRECT_INJECTION)
+    IMP previous = method_setImplementation(method, replacement);
+    if (original) {
+        *original = previous;
+    }
+#else
+    MSHookMessageEx(targetClass, selector, replacement, original);
+#endif
+    return YES;
+}
+
 static NSUInteger ICInstallObjectiveCHooks(void) {
     static BOOL afInstalled = NO;
     static BOOL trustKitEvaluateInstalled = NO;
@@ -133,32 +163,29 @@ static NSUInteger ICInstallObjectiveCHooks(void) {
 
     Class afSecurityPolicy = objc_getClass("AFSecurityPolicy");
     SEL afSelector = sel_registerName("evaluateServerTrust:forDomain:");
-    if (!afInstalled && afSecurityPolicy && class_getInstanceMethod(afSecurityPolicy, afSelector)) {
-        MSHookMessageEx(afSecurityPolicy,
-                        afSelector,
-                        reinterpret_cast<IMP>(&ICReplacementAFEvaluate),
-                        reinterpret_cast<IMP *>(&ICOriginalAFEvaluate));
+    if (!afInstalled && ICInstallMessageHook(afSecurityPolicy,
+                                             afSelector,
+                                             reinterpret_cast<IMP>(&ICReplacementAFEvaluate),
+                                             reinterpret_cast<IMP *>(&ICOriginalAFEvaluate))) {
         afInstalled = YES;
         count++;
     }
 
     Class trustKit = objc_getClass("TSKPinningValidator");
     SEL evaluateSelector = sel_registerName("evaluateTrust:forHostname:");
-    if (!trustKitEvaluateInstalled && trustKit && class_getInstanceMethod(trustKit, evaluateSelector)) {
-        MSHookMessageEx(trustKit,
-                        evaluateSelector,
-                        reinterpret_cast<IMP>(&ICReplacementTrustKitEvaluate),
-                        reinterpret_cast<IMP *>(&ICOriginalTrustKitEvaluate));
+    if (!trustKitEvaluateInstalled && ICInstallMessageHook(trustKit,
+                                                           evaluateSelector,
+                                                           reinterpret_cast<IMP>(&ICReplacementTrustKitEvaluate),
+                                                           reinterpret_cast<IMP *>(&ICOriginalTrustKitEvaluate))) {
         trustKitEvaluateInstalled = YES;
         count++;
     }
 
     SEL challengeSelector = sel_registerName("handleChallenge:completionHandler:");
-    if (!trustKitChallengeInstalled && trustKit && class_getInstanceMethod(trustKit, challengeSelector)) {
-        MSHookMessageEx(trustKit,
-                        challengeSelector,
-                        reinterpret_cast<IMP>(&ICReplacementTrustKitHandleChallenge),
-                        reinterpret_cast<IMP *>(&ICOriginalTrustKitHandleChallenge));
+    if (!trustKitChallengeInstalled && ICInstallMessageHook(trustKit,
+                                                            challengeSelector,
+                                                            reinterpret_cast<IMP>(&ICReplacementTrustKitHandleChallenge),
+                                                            reinterpret_cast<IMP *>(&ICOriginalTrustKitHandleChallenge))) {
         trustKitChallengeInstalled = YES;
         count++;
     }
@@ -225,43 +252,33 @@ static long ICReplacementSSLGetVerifyResult(const void *ssl) {
 static NSUInteger ICInstallNativeTLSHooks(void) {
     NSUInteger count = 0;
 
-    void *setCustomVerify = dlsym(RTLD_DEFAULT, "SSL_set_custom_verify");
-    if (setCustomVerify) {
-        MSHookFunction(setCustomVerify,
-                       reinterpret_cast<void *>(&ICReplacementSSLSetCustomVerify),
-                       reinterpret_cast<void **>(&ICOriginalSSLSetCustomVerify));
+    if (ICInstallFunctionHook("SSL_set_custom_verify",
+                              reinterpret_cast<void *>(&ICReplacementSSLSetCustomVerify),
+                              reinterpret_cast<void **>(&ICOriginalSSLSetCustomVerify))) {
         count++;
     }
 
-    void *setContextCustomVerify = dlsym(RTLD_DEFAULT, "SSL_CTX_set_custom_verify");
-    if (setContextCustomVerify) {
-        MSHookFunction(setContextCustomVerify,
-                       reinterpret_cast<void *>(&ICReplacementSSLCTXSetCustomVerify),
-                       reinterpret_cast<void **>(&ICOriginalSSLCTXSetCustomVerify));
+    if (ICInstallFunctionHook("SSL_CTX_set_custom_verify",
+                              reinterpret_cast<void *>(&ICReplacementSSLCTXSetCustomVerify),
+                              reinterpret_cast<void **>(&ICOriginalSSLCTXSetCustomVerify))) {
         count++;
     }
 
-    void *setVerify = dlsym(RTLD_DEFAULT, "SSL_set_verify");
-    if (setVerify) {
-        MSHookFunction(setVerify,
-                       reinterpret_cast<void *>(&ICReplacementSSLSetVerify),
-                       reinterpret_cast<void **>(&ICOriginalSSLSetVerify));
+    if (ICInstallFunctionHook("SSL_set_verify",
+                              reinterpret_cast<void *>(&ICReplacementSSLSetVerify),
+                              reinterpret_cast<void **>(&ICOriginalSSLSetVerify))) {
         count++;
     }
 
-    void *setContextVerify = dlsym(RTLD_DEFAULT, "SSL_CTX_set_verify");
-    if (setContextVerify) {
-        MSHookFunction(setContextVerify,
-                       reinterpret_cast<void *>(&ICReplacementSSLCTXSetVerify),
-                       reinterpret_cast<void **>(&ICOriginalSSLCTXSetVerify));
+    if (ICInstallFunctionHook("SSL_CTX_set_verify",
+                              reinterpret_cast<void *>(&ICReplacementSSLCTXSetVerify),
+                              reinterpret_cast<void **>(&ICOriginalSSLCTXSetVerify))) {
         count++;
     }
 
-    void *getVerifyResult = dlsym(RTLD_DEFAULT, "SSL_get_verify_result");
-    if (getVerifyResult) {
-        MSHookFunction(getVerifyResult,
-                       reinterpret_cast<void *>(&ICReplacementSSLGetVerifyResult),
-                       reinterpret_cast<void **>(&ICOriginalSSLGetVerifyResult));
+    if (ICInstallFunctionHook("SSL_get_verify_result",
+                              reinterpret_cast<void *>(&ICReplacementSSLGetVerifyResult),
+                              reinterpret_cast<void **>(&ICOriginalSSLGetVerifyResult))) {
         count++;
     }
 

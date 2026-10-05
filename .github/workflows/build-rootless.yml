@@ -58,6 +58,7 @@ jobs:
           manager=$(find "$RUNNER_TEMP/package-rootless" -path '*/iOSCapture.app/iOSCapture' -type f -print -quit)
           lipo -info "$hook"
           lipo -info "$direct_hook"
+          ! otool -L "$direct_hook" | grep -E 'CydiaSubstrate|libsubstrate'
           lipo -info "$manager"
           mkdir -p artifacts
           cp "$direct_hook" artifacts/iOSCaptureDirect-rootless.dylib

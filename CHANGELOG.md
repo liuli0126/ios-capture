@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 - 2026-10-05
+
+- Removed the Substrate load dependency from direct-injection dylibs.
+- Added standalone fishhook symbol rebinding and Objective-C runtime method replacement for TrollStore injection tools.
+- Removed preference writes from the direct-injection startup path.
+
 ## 0.1.2 - 2026-10-05
 
 - Added explicit Douyin and TikTok bundle filters for reliable ElleKit injection.

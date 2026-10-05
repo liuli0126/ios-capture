@@ -5,12 +5,11 @@
 
 %ctor {
     @autoreleasepool {
-        ICMarkCurrentProcessLoaded();
-
 #if defined(IOSCAPTURE_DIRECT_INJECTION)
         ICInstallTLSHooks();
-        ICMarkCurrentProcessInjected();
 #else
+        ICMarkCurrentProcessLoaded();
+
         if (!ICIsCurrentProcessSelected()) {
             return;
         }
